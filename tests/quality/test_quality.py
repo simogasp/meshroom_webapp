@@ -16,7 +16,7 @@ import logging
 import subprocess
 import sys
 from pathlib import Path
-from typing import List, Tuple
+from typing import Optional, Tuple
 
 # Configure logging
 logging.basicConfig(
@@ -29,7 +29,10 @@ class QualityTester:
     """Runs code quality tests for the Meshroom WebApp project."""
 
     def __init__(
-        self, project_root: Path, output_dir: Path = None, fix_issues: bool = False
+        self,
+        project_root: Path,
+        output_dir: Optional[Path] = None,
+        fix_issues: bool = False,
     ):
         """
         Initialize the quality tester.
@@ -78,8 +81,8 @@ class QualityTester:
 
             # Save report
             with open(output_file, "w") as f:
-                f.write(f"Flake8 Report\n")
-                f.write(f"=============\n\n")
+                f.write("Flake8 Report\n")
+                f.write("=============\n\n")
                 f.write(f"Return code: {result.returncode}\n\n")
                 f.write(f"STDOUT:\n{result.stdout}\n\n")
                 f.write(f"STDERR:\n{result.stderr}\n")
@@ -90,7 +93,7 @@ class QualityTester:
                 logger.info("Flake8 checks passed - no linting issues found")
                 return True, result.stdout
             else:
-                logger.warning(f"Flake8 found linting issues")
+                logger.warning("Flake8 found linting issues")
                 logger.warning(f"Issues:\n{result.stdout}")
                 return False, result.stdout
 
@@ -129,8 +132,8 @@ class QualityTester:
 
             # Save report
             with open(output_file, "w") as f:
-                f.write(f"MyPy Report\n")
-                f.write(f"===========\n\n")
+                f.write("MyPy Report\n")
+                f.write("===========\n\n")
                 f.write(f"Return code: {result.returncode}\n\n")
                 f.write(f"STDOUT:\n{result.stdout}\n\n")
                 f.write(f"STDERR:\n{result.stderr}\n")
@@ -182,8 +185,8 @@ class QualityTester:
 
             # Save report
             with open(output_file, "w") as f:
-                f.write(f"Black Report\n")
-                f.write(f"============\n\n")
+                f.write("Black Report\n")
+                f.write("============\n\n")
                 f.write(f"Return code: {result.returncode}\n\n")
                 f.write(f"STDOUT:\n{result.stdout}\n\n")
                 f.write(f"STDERR:\n{result.stderr}\n")
@@ -241,8 +244,8 @@ class QualityTester:
 
             # Save report
             with open(output_file, "w") as f:
-                f.write(f"isort Report\n")
-                f.write(f"============\n\n")
+                f.write("isort Report\n")
+                f.write("============\n\n")
                 f.write(f"Return code: {result.returncode}\n\n")
                 f.write(f"STDOUT:\n{result.stdout}\n\n")
                 f.write(f"STDERR:\n{result.stderr}\n")

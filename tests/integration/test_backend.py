@@ -14,7 +14,6 @@ import argparse
 import logging
 import sys
 import time
-from typing import Optional
 
 import requests
 
@@ -135,7 +134,8 @@ class BackendTester:
                 return True
             else:
                 logger.error(
-                    f"Non-existent job test failed: expected 404, got {response.status_code}"
+                    f"Non-existent job test failed: expected 404, got "
+                    f"{response.status_code}"
                 )
                 return False
         except Exception as e:

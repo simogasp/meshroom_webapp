@@ -19,9 +19,8 @@ import argparse
 import logging
 import subprocess
 import sys
-import time
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 
 def setup_logging(verbose_level: str):
@@ -54,7 +53,7 @@ logger = logging.getLogger(__name__)
 class TestRunner:
     """Orchestrates test execution for the Meshroom WebApp."""
 
-    def __init__(self, project_root: Path = None):
+    def __init__(self, project_root: Optional[Path] = None):
         """
         Initialize the test runner.
 

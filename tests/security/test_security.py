@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 class SecurityTester:
     """Runs security tests for the Meshroom WebApp project."""
 
-    def __init__(self, project_root: Path, output_dir: Path = None):
+    def __init__(self, project_root: Path, output_dir: Optional[Path] = None):
         """
         Initialize the security tester.
 
@@ -116,7 +116,7 @@ class SecurityTester:
             bandit_report = self.output_dir / "bandit_report.json"
 
             # Run bandit scan
-            result = subprocess.run(
+            subprocess.run(
                 [
                     sys.executable,
                     "-m",
@@ -141,7 +141,6 @@ class SecurityTester:
                     scan_data = json.load(f)
 
                 issues = scan_data.get("results", [])
-                metrics = scan_data.get("metrics", {})
 
                 # Log summary
                 total_issues = len(issues)
@@ -229,8 +228,11 @@ class SecurityTester:
         summary_report = self.output_dir / "security_summary.json"
 
         summary = {
-            "timestamp": "2025-08-13T19:00:00Z",  # Would use datetime.now() in real implementation
-            "overall_status": "PASS" if (safety_success and bandit_success) else "FAIL",
+            # Would use datetime.now() in real implementation
+            "timestamp": "2025-08-13T19:00:00Z",
+            "overall_status": (
+                "PASS" if (safety_success and bandit_success) else "FAIL"
+            ),
             "safety_check": {
                 "status": "PASS" if safety_success else "FAIL",
                 "vulnerabilities_found": len(safety_data) if safety_data else 0,

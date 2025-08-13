@@ -13,12 +13,10 @@ Usage:
 import argparse
 import json
 import logging
-import os
 import random
 import sys
-import tempfile
 import time
-from typing import Dict, List, Optional
+from typing import Optional
 
 import requests
 import websocket

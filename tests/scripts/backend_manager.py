@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 class BackendManager:
     """Manages backend server lifecycle for testing."""
 
-    def __init__(self, backend_dir: str = None, port: int = 8000):
+    def __init__(self, backend_dir: Optional[str] = None, port: int = 8000):
         """
         Initialize the backend manager.
 
@@ -45,9 +45,9 @@ class BackendManager:
         if backend_dir is None:
             # Default to project structure
             project_root = Path(__file__).parent.parent.parent
-            backend_dir = project_root / "src" / "backend" / "fake_backend"
-
-        self.backend_dir = Path(backend_dir)
+            self.backend_dir = project_root / "src" / "backend" / "fake_backend"
+        else:
+            self.backend_dir = Path(backend_dir)
         self.port = port
         self.base_url = f"http://localhost:{port}"
         self.pid_file = Path("/tmp") / f"meshroom_backend_{port}.pid"
@@ -266,7 +266,7 @@ class BackendManager:
                 response = requests.get(f"{self.base_url}/", timeout=2)
                 if response.status_code == 200:
                     status["info"] = response.json()
-            except:
+            except requests.RequestException:
                 pass
 
         return status

@@ -102,4 +102,3 @@ Use other markdown files for detailed documentation.
 * Dummy 3D model can be a small `.glb` placeholder file with random bytes.
 
 ---
-

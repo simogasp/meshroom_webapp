@@ -11,9 +11,10 @@ This project includes a comprehensive continuous integration and deployment pipe
 - **Security Scanning**: Dependency vulnerabilities (safety) and static analysis (bandit)
 - **Cross-Platform**: Tests on Python 3.10-3.13
 
-See [PIPELINE_GUIDE.md](PIPELINE_GUIDE.md) for detailed documentation.
+See [.github/workflows/PIPELINE_GUIDE.md](.github/workflows/PIPELINE_GUIDE.md) for detailed documentation.
 
 ### Quick Pipeline Usage
+
 ```bash
 # Run all tests
 python tests/run_tests.py

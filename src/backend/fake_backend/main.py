@@ -22,21 +22,28 @@ if __name__ == "__main__":
     )
 
 from fastapi import (
-    FastAPI, File, Form, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
+    FastAPI,
+    File,
+    Form,
+    HTTPException,
+    UploadFile,
+    WebSocket,
+    WebSocketDisconnect,
 )
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
 try:
     from .jobs import JobManager, generate_dummy_model
-    from .models import (
-        ImageData, JobResponse, ProcessingJob, UploadRequest
-    )
+    from .models import ImageData, JobResponse, ProcessingJob, UploadRequest
 except ImportError:
     # Handle direct execution
-    from jobs import JobManager, generate_dummy_model
-    from models import (
-        ImageData, JobResponse, ProcessingJob, UploadRequest
+    from jobs import JobManager, generate_dummy_model  # type: ignore[no-redef]
+    from models import (  # type: ignore[no-redef]
+        ImageData,
+        JobResponse,
+        ProcessingJob,
+        UploadRequest,
     )
 
 

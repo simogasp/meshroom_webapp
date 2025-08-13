@@ -14,13 +14,14 @@ from typing import Dict, List, Optional, Set
 from fastapi import WebSocket
 
 try:
-    from .models import (
-        JobStatus, ProcessingJob, ProgressUpdate, WebSocketConnection
-    )
+    from .models import JobStatus, ProcessingJob, ProgressUpdate, WebSocketConnection
 except ImportError:
     # Handle direct execution
-    from models import (
-        JobStatus, ProcessingJob, ProgressUpdate, WebSocketConnection
+    from models import (  # type: ignore[no-redef]
+        JobStatus,
+        ProcessingJob,
+        ProgressUpdate,
+        WebSocketConnection,
     )
 
 
@@ -59,7 +60,7 @@ class JobManager:
     and manages real-time communication with clients.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the job manager."""
         self._jobs: Dict[str, ProcessingJob] = {}
         self._connections: Dict[str, WebSocket] = {}
@@ -137,7 +138,7 @@ class JobManager:
         logger.info(f"Registered WebSocket {connection_id} for job {job_id}")
         return connection_id
 
-    async def unregister_websocket(self, connection_id: str):
+    async def unregister_websocket(self, connection_id: str) -> None:
         """
         Unregister a WebSocket connection.
 
@@ -153,7 +154,7 @@ class JobManager:
 
             logger.info(f"Unregistered WebSocket {connection_id}")
 
-    async def start_processing(self, job_id: str):
+    async def start_processing(self, job_id: str) -> None:
         """
         Start processing a job asynchronously.
 
@@ -178,7 +179,7 @@ class JobManager:
 
         logger.info(f"Started processing job {job_id}")
 
-    async def _simulate_processing(self, job_id: str):
+    async def _simulate_processing(self, job_id: str) -> None:
         """
         Simulate photogrammetry processing with progress updates.
 
@@ -254,7 +255,9 @@ class JobManager:
             if job_id in self._processing_tasks:
                 del self._processing_tasks[job_id]
 
-    async def _send_progress_update(self, job_id: str, progress: int, message: str):
+    async def _send_progress_update(
+        self, job_id: str, progress: int, message: str
+    ) -> None:
         """
         Send the progress update to all subscribed WebSocket connections.
 

@@ -17,7 +17,6 @@ from typing import Any, Dict, List, Optional
 import requests
 import websocket
 
-
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -160,7 +159,7 @@ class PhotogrammetryClient:
 
             if response.status_code == 200:
                 result = response.json()
-                job_id = result['job_id']
+                job_id: str = result['job_id']
                 logger.info(f"Upload successful! Job ID: {job_id}")
                 return job_id
             else:
@@ -184,7 +183,8 @@ class PhotogrammetryClient:
         try:
             response = self.session.get(f"{self.base_url}/jobs/{job_id}")
             if response.status_code == 200:
-                return response.json()
+                result: Dict[str, Any] = response.json()
+                return result
             else:
                 logger.error(f"Failed to get job status: {response.status_code}")
                 return None
@@ -286,6 +286,9 @@ class PhotogrammetryClient:
                         continue
                     else:
                         raise e
+
+            # If we get here, all retry attempts failed
+            return None
 
         except Exception as e:
             logger.error(f"Download error: {e}")

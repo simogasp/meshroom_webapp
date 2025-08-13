@@ -24,7 +24,6 @@ from typing import Optional
 
 import requests
 
-
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,

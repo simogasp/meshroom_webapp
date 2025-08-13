@@ -18,7 +18,6 @@ import sys
 from pathlib import Path
 from typing import List, Tuple
 
-
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,

@@ -23,7 +23,6 @@ from typing import Dict, List, Optional
 import requests
 import websocket
 
-
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,

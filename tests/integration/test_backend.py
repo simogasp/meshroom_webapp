@@ -12,11 +12,11 @@ Usage:
 
 import argparse
 import logging
-import requests
 import sys
 import time
 from typing import Optional
 
+import requests
 
 # Configure logging
 logging.basicConfig(

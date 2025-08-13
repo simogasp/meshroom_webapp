@@ -292,7 +292,7 @@ class PhotogrammetryClient:
         completed = False
         start_time = time.time()
 
-        def on_message(ws, message):
+        def on_message(ws: websocket.WebSocketApp, message: str) -> None:
             nonlocal completed
             try:
                 data = json.loads(message)
@@ -316,13 +316,15 @@ class PhotogrammetryClient:
             except Exception as e:
                 logger.error(f"Message handling error: {e}")
 
-        def on_error(ws, error):
+        def on_error(ws: websocket.WebSocketApp, error: Exception) -> None:
             logger.error(f"WebSocket error: {error}")
 
-        def on_close(ws, close_status_code, close_msg):
+        def on_close(
+            ws: websocket.WebSocketApp, close_status_code: int, close_msg: str
+        ) -> None:
             logger.info("WebSocket connection closed")
 
-        def on_open(ws):
+        def on_open(ws: websocket.WebSocketApp) -> None:
             logger.info("WebSocket connection established")
 
         try:
@@ -338,7 +340,7 @@ class PhotogrammetryClient:
             # Run WebSocket in a separate thread
             import threading
 
-            def run_websocket():
+            def run_websocket() -> None:
                 ws.run_forever()
 
             ws_thread = threading.Thread(target=run_websocket)
@@ -428,7 +430,7 @@ class PhotogrammetryClient:
             return False
 
 
-def main():
+def main() -> None:
     """Main entry point for the CLI client."""
 
     logger.info("Fake Photogrammetry Client v0.1.0")

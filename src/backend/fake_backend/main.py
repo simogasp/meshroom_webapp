@@ -11,7 +11,7 @@ import logging
 import os
 import sys
 from datetime import datetime
-from typing import List
+from typing import Any, Dict, List
 
 # Add the parent directory to the path for imports when running directly
 if __name__ == "__main__":
@@ -83,7 +83,7 @@ os.makedirs(models_dir, exist_ok=True)
 
 
 @app.on_event("startup")
-async def startup_event():
+async def startup_event() -> None:
     """Initialize application on startup."""
     logger.info("Starting Fake Photogrammetry Backend v0.1.0")
     logger.info(f"Upload directory: {uploads_dir}")
@@ -91,13 +91,13 @@ async def startup_event():
 
 
 @app.on_event("shutdown")
-async def shutdown_event():
+async def shutdown_event() -> None:
     """Clean up resources on shutdown."""
     logger.info("Shutting down Fake Photogrammetry Backend")
 
 
 @app.get("/")
-async def root():
+async def root() -> Dict[str, Any]:
     """
     Root endpoint with basic server information.
 
@@ -115,7 +115,7 @@ async def root():
 
 
 @app.get("/health")
-async def health_check():
+async def health_check() -> Dict[str, str]:
     """
     Health check endpoint.
 
@@ -131,7 +131,7 @@ async def upload_images(
     quality: str = Form("medium"),
     max_features: int = Form(1000),
     enable_gpu: bool = Form(False),
-):
+) -> JobResponse:
     """
     Upload images for photogrammetry processing.
 
@@ -240,7 +240,7 @@ async def upload_images(
 
 
 @app.get("/jobs/{job_id}")
-async def get_job_status(job_id: str):
+async def get_job_status(job_id: str) -> Dict[str, Any]:
     """
     Get job status and information.
 
@@ -273,7 +273,7 @@ async def get_job_status(job_id: str):
 
 
 @app.get("/jobs/{job_id}/download")
-async def download_model(job_id: str):
+async def download_model(job_id: str) -> FileResponse:
     """
     Download the generated 3D model.
 
@@ -314,7 +314,7 @@ async def download_model(job_id: str):
 
 
 @app.delete("/jobs/{job_id}")
-async def cancel_job(job_id: str):
+async def cancel_job(job_id: str) -> Dict[str, str]:
     """
     Cancel a processing job.
 
@@ -337,7 +337,7 @@ async def cancel_job(job_id: str):
 
 
 @app.get("/jobs")
-async def list_jobs():
+async def list_jobs() -> List[Dict[str, Any]]:
     """
     List all jobs with their status.
 
@@ -359,7 +359,7 @@ async def list_jobs():
 
 
 @app.websocket("/ws/{job_id}")
-async def websocket_endpoint(websocket: WebSocket, job_id: str):
+async def websocket_endpoint(websocket: WebSocket, job_id: str) -> None:
     """
     WebSocket endpoint for real-time job progress updates.
 

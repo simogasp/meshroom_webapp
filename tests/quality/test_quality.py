@@ -57,18 +57,14 @@ class QualityTester:
         logger.info("Running flake8 linting checks...")
 
         try:
-            # Basic flake8 configuration
+            # Use .flake8 configuration file for comprehensive settings
+            # This includes max-line-length, exclusions, per-file ignores, etc.
             flake8_args = [
                 sys.executable,
                 "-m",
                 "flake8",
                 "src/",
                 "tests/",
-                "--count",
-                "--statistics",
-                "--max-line-length=88",
-                "--extend-ignore=E203,W503",  # Compatible with black formatter
-                "--exclude=__pycache__,.git,.tox,dist,*.egg",
                 "--format=%(path)s:%(row)d:%(col)d: %(code)s %(text)s",
             ]
 
@@ -165,8 +161,7 @@ class QualityTester:
                 "black",
                 "src/",
                 "tests/",
-                "--line-length=88",
-                "--target-version=py39",
+                # Configuration is automatically read from pyproject.toml
             ]
 
             if not self.fix_issues:
@@ -224,8 +219,7 @@ class QualityTester:
                 "isort",
                 "src/",
                 "tests/",
-                "--profile=black",
-                "--line-length=88",
+                # Configuration is automatically read from pyproject.toml
             ]
 
             if not self.fix_issues:

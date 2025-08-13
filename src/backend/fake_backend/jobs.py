@@ -23,6 +23,30 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
+def generate_dummy_model(job_id: str) -> bytes:
+    """
+    Generate a dummy GLB model file.
+
+    Args:
+        job_id: The job identifier
+
+    Returns:
+        Dummy GLB file content as bytes
+    """
+    # Create a simple dummy GLB file header
+    # This is not a real GLB file, just dummy data for testing
+    header = b"glTF" + b"\x02\x00\x00\x00"  # GLB version 2.0
+
+    # Generate some random binary data to simulate a model
+    # nosec B311: Using random for test data generation only, not cryptographic
+    model_data = bytes([random.randint(0, 255) for _ in range(1024)])
+
+    # Add job ID as metadata (for identification)
+    metadata = f"Generated for job: {job_id}".encode('utf-8')
+
+    return header + len(metadata).to_bytes(4, 'little') + metadata + model_data
+
+
 class JobManager:
     """
     Manages processing jobs and WebSocket connections.
@@ -286,26 +310,3 @@ class JobManager:
         await self._send_progress_update(job_id, job.progress, "Job cancelled")
         logger.info(f"Cancelled job {job_id}")
         return True
-
-    def generate_dummy_model(self, job_id: str) -> bytes:
-        """
-        Generate a dummy GLB model file.
-
-        Args:
-            job_id: The job identifier
-
-        Returns:
-            Dummy GLB file content as bytes
-        """
-        # Create a simple dummy GLB file header
-        # This is not a real GLB file, just dummy data for testing
-        header = b"glTF" + b"\x02\x00\x00\x00"  # GLB version 2.0
-
-        # Generate some random binary data to simulate a model
-        # nosec B311: Using random for test data generation only, not cryptographic
-        model_data = bytes([random.randint(0, 255) for _ in range(1024)])
-
-        # Add job ID as metadata (for identification)
-        metadata = f"Generated for job: {job_id}".encode('utf-8')
-
-        return header + len(metadata).to_bytes(4, 'little') + metadata + model_data

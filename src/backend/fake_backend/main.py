@@ -22,11 +22,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
 try:
-    from .jobs import JobManager
+    from .jobs import JobManager, generate_dummy_model
     from .models import ImageData, JobResponse, ProcessingJob, UploadRequest
 except ImportError:
     # Handle direct execution
-    from jobs import JobManager
+    from jobs import JobManager, generate_dummy_model
     from models import ImageData, JobResponse, ProcessingJob, UploadRequest
 
 
@@ -279,7 +279,7 @@ async def download_model(job_id: str):
         )
 
     # Generate the dummy model file
-    model_data = job_manager.generate_dummy_model(job_id)
+    model_data = generate_dummy_model(job_id)
     model_path = f"models/{job_id}_model.glb"
 
     # Save model to file

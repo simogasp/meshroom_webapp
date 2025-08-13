@@ -174,10 +174,11 @@ class JobManager:
 
             for stage_name, start_progress, end_progress in stages:
                 # Simulate stage processing
+                # nosec B311: Using random for simulation purposes only, not cryptographic
                 steps = random.randint(3, 8)
                 for step in range(steps + 1):
                     if job.status != JobStatus.PROCESSING:
-                        return  # Job was canceled or failed
+                        return  # Job was cancelled or failed
 
                     progress = start_progress + (end_progress - start_progress) * (step / steps)
                     job.progress = int(progress)
@@ -186,7 +187,8 @@ class JobManager:
                     await self._send_progress_update(job_id, job.progress, message)
 
                     # Random delay to simulate processing time
-                    delay = random.uniform(.05, .5)
+                    # nosec B311: Using random for simulation timing only, not cryptographic
+                    delay = random.uniform(0.5, 2.0)
                     await asyncio.sleep(delay)
 
             # Complete the job - update status FIRST before sending the final message
@@ -300,6 +302,7 @@ class JobManager:
         header = b"glTF" + b"\x02\x00\x00\x00"  # GLB version 2.0
 
         # Generate some random binary data to simulate a model
+        # nosec B311: Using random for test data generation only, not cryptographic
         model_data = bytes([random.randint(0, 255) for _ in range(1024)])
 
         # Add job ID as metadata (for identification)

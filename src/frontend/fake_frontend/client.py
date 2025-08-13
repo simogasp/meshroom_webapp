@@ -63,6 +63,7 @@ class PhotogrammetryClient:
         target_size = size_kb * 1024
         remaining_size = max(0, target_size - len(jpeg_header) - 2)  # Account for end marker
 
+        # nosec B311: Using random for test data generation only, not cryptographic
         random_data = bytes([random.randint(0, 255) for _ in range(remaining_size)])
 
         # Add JPEG end marker
@@ -83,6 +84,7 @@ class PhotogrammetryClient:
         images = []
         for i in range(count):
             filename = f"test_image_{i+1:03d}.jpg"
+            # nosec B311: Using random for test data generation only, not cryptographic
             size_kb = random.randint(1, 10)  # Random size between 1-10 KB
             content = self.generate_dummy_image(filename, size_kb)
 

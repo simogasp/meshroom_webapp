@@ -397,9 +397,13 @@ async def websocket_endpoint(websocket: WebSocket, job_id: str):
 if __name__ == "__main__":
     import uvicorn
 
+    # For production, bind to localhost only for security
+    # For development/testing, use 0.0.0.0 only if explicitly needed
+    host = "127.0.0.1"  # Changed from "0.0.0.0" for security
+
     uvicorn.run(
         "main:app",
-        host="0.0.0.0",
+        host=host,
         port=8000,
         reload=True,
         log_level="info"

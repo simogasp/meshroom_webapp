@@ -12,7 +12,7 @@ import logging
 import os
 import random
 import time
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import requests
 import websocket
@@ -71,7 +71,7 @@ class PhotogrammetryClient:
 
         return jpeg_header + random_data + jpeg_end
 
-    def generate_test_images(self, count: int = 5) -> List[Dict[str, any]]:
+    def generate_test_images(self, count: int = 5) -> List[Dict[str, Any]]:
         """
         Generate a set of test images.
 
@@ -99,7 +99,7 @@ class PhotogrammetryClient:
 
     def upload_images(
         self,
-        images: List[Dict[str, any]],
+        images: List[Dict[str, Any]],
         quality: str = "medium",
         max_features: int = 1000,
         enable_gpu: bool = False
@@ -155,7 +155,7 @@ class PhotogrammetryClient:
             logger.error(f"Upload error: {e}")
             return None
 
-    def get_job_status(self, job_id: str) -> Optional[Dict[str, any]]:
+    def get_job_status(self, job_id: str) -> Optional[Dict[str, Any]]:
         """
         Get job status from the backend.
 
@@ -176,18 +176,26 @@ class PhotogrammetryClient:
             logger.error(f"Error getting job status: {e}")
             return None
 
-    def download_model(self, job_id: str, output_dir: str = "downloads") -> Optional[str]:
+    def download_model(self, job_id: str, output_dir: Optional[str] = None) -> Optional[str]:
         """
         Download the generated 3D model.
 
         Args:
             job_id: The job identifier
-            output_dir: Directory to save the model
+            output_dir: Directory to save the model (defaults to project output directory)
 
         Returns:
             Path to downloaded file or None if failed
         """
         try:
+            # Use the project's output directory if not specified
+            if output_dir is None:
+                # Get the project root - need to go up 5 levels from this file
+                # client.py -> fake_frontend -> frontend -> src -> project_root
+                current_file = os.path.abspath(__file__)
+                project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(current_file))))
+                output_dir = os.path.join(project_root, "output", "frontend", "fake_frontend", "downloads")
+            
             # Create output directory
             os.makedirs(output_dir, exist_ok=True)
 

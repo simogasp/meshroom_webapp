@@ -56,17 +56,22 @@ app.add_middleware(
 # Initialize job manager
 job_manager = JobManager()
 
-# Create directories for file storage
-os.makedirs("uploads", exist_ok=True)
-os.makedirs("models", exist_ok=True)
+# Create directories for file storage in output folder
+# Get the absolute path to the project root (3 levels up from this file)
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+uploads_dir = os.path.join(project_root, "output", "backend", "fake_backend", "uploads")
+models_dir = os.path.join(project_root, "output", "backend", "fake_backend", "models")
+
+os.makedirs(uploads_dir, exist_ok=True)
+os.makedirs(models_dir, exist_ok=True)
 
 
 @app.on_event("startup")
 async def startup_event():
     """Initialize application on startup."""
     logger.info("Starting Fake Photogrammetry Backend v0.1.0")
-    logger.info(f"Upload directory: {os.path.abspath('uploads')}")
-    logger.info(f"Models directory: {os.path.abspath('models')}")
+    logger.info(f"Upload directory: {uploads_dir}")
+    logger.info(f"Models directory: {models_dir}")
 
 
 @app.on_event("shutdown")
@@ -166,6 +171,11 @@ async def upload_images(
                     detail=f"File {file.filename} too large (max 50MB)"
                 )
 
+            # Save uploaded file to the uploads directory
+            upload_path = os.path.join(uploads_dir, file.filename)
+            with open(upload_path, "wb") as f:
+                f.write(content)
+
             # Create image data object
             image_data = ImageData(
                 filename=file.filename,
@@ -175,7 +185,7 @@ async def upload_images(
             )
             images.append(image_data)
 
-            logger.info(f"Uploaded {file.filename}: {file_size} bytes")
+            logger.info(f"Uploaded {file.filename}: {file_size} bytes -> {upload_path}")
 
         # Check total upload size
         if total_size > 500 * 1024 * 1024:  # 500MB total
@@ -280,13 +290,13 @@ async def download_model(job_id: str):
 
     # Generate the dummy model file
     model_data = generate_dummy_model(job_id)
-    model_path = f"models/{job_id}_model.glb"
+    model_path = os.path.join(models_dir, f"{job_id}_model.glb")
 
     # Save model to file
     with open(model_path, "wb") as f:
         f.write(model_data)
 
-    logger.info(f"Generated dummy model for job {job_id}: {len(model_data)} bytes")
+    logger.info(f"Generated dummy model for job {job_id}: {len(model_data)} bytes -> {model_path}")
 
     return FileResponse(
         path=model_path,

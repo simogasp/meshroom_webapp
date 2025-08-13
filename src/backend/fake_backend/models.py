@@ -9,7 +9,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -81,7 +81,7 @@ class ProcessingJob:
     job_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     status: JobStatus = JobStatus.PENDING
     images: List[ImageData] = field(default_factory=list)
-    parameters: Dict[str, any] = field(default_factory=dict)
+    parameters: Dict[str, Any] = field(default_factory=dict)
     progress: int = 0
     created_at: datetime = field(default_factory=datetime.now)
     started_at: Optional[datetime] = None
@@ -91,12 +91,12 @@ class ProcessingJob:
 
     @property
     def total_images(self) -> int:
-        """Get the total number of images in the job."""
+        """Get total number of images in the job."""
         return len(self.images)
 
     @property
     def total_size_mb(self) -> float:
-        """Get the total size of all images in megabytes."""
+        """Get total size of all images in megabytes."""
         return sum(image.size_mb for image in self.images)
 
     @property
@@ -128,5 +128,5 @@ class WebSocketConnection:
 
     @property
     def is_subscribed(self) -> bool:
-        """Check if the connection is subscribed to a job."""
+        """Check if connection is subscribed to a job."""
         return self.job_id is not None

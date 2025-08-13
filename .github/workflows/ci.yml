@@ -1,0 +1,197 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ master, develop, dev/ci ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  integration-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Cache pip dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-${{ matrix.python-version }}-
+          ${{ runner.os }}-pip-
+
+    - name: Install runtime dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Install test dependencies
+      run: |
+        pip install -r requirements-test.txt
+
+    - name: Run integration tests
+      run: |
+        python tests/run_tests.py --integration --quick --verbose INFO
+
+  quality-tests:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+    - name: Cache pip dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-quality-${{ hashFiles('**/requirements*.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-quality-
+          ${{ runner.os }}-pip-
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-test.txt
+
+    - name: Run code quality tests
+      run: |
+        python tests/run_tests.py --quality --verbose INFO
+
+    - name: Upload quality reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: quality-reports-${{ github.run_number }}
+        path: reports/quality/
+        retention-days: 30
+
+  security-tests:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+    - name: Cache pip dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-security-${{ hashFiles('**/requirements*.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-security-
+          ${{ runner.os }}-pip-
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-test.txt
+
+    - name: Run security tests
+      run: |
+        python tests/run_tests.py --security --verbose INFO
+
+    - name: Upload security reports (internal only)
+      uses: actions/upload-artifact@v4
+      if: always() && (github.event_name == 'push' && contains(fromJSON('["main", "develop"]'), github.ref_name))
+      with:
+        name: security-reports-${{ github.run_number }}
+        path: reports/security/
+        retention-days: 30
+
+    - name: Upload security summary (public)
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: security-summary-${{ github.run_number }}
+        path: reports/security/security_summary.json
+        retention-days: 90
+
+#  build:
+#    runs-on: ubuntu-latest
+#    needs: [integration-tests, quality-tests, security-tests]
+#    if: github.event_name == 'push'
+#
+#    steps:
+#    - uses: actions/checkout@v4
+#
+#    - name: Set up Python
+#      uses: actions/setup-python@v5
+#      with:
+#        python-version: "3.11"
+#
+#    - name: Install dependencies
+#      run: |
+#        python -m pip install --upgrade pip
+#        pip install -r requirements.txt
+#
+#    - name: Create distribution
+#      run: |
+#        mkdir -p dist
+#
+#        # Create source distribution
+#        tar -czf dist/meshroom-webapp-${{ github.sha }}.tar.gz \
+#          --exclude-vcs \
+#          --exclude='*.pyc' \
+#          --exclude='__pycache__' \
+#          --exclude='.pytest_cache' \
+#          --exclude='downloads' \
+#          --exclude='models' \
+#          --exclude='uploads' \
+#          --exclude='reports' \
+#          src/ requirements.txt requirements-test.txt README.md .github/ tests/
+#
+#        # Create build info
+#        echo "Build Information" > dist/build-info.txt
+#        echo "=================" >> dist/build-info.txt
+#        echo "Commit: ${{ github.sha }}" >> dist/build-info.txt
+#        echo "Branch: ${{ github.ref_name }}" >> dist/build-info.txt
+#        echo "Build Date: $(date -u)" >> dist/build-info.txt
+#        echo "Python Version: $(python --version)" >> dist/build-info.txt
+#
+#        # List contents
+#        echo "Distribution contents:"
+#        ls -la dist/
+#
+#    - name: Upload build artifacts
+#      uses: actions/upload-artifact@v4
+#      with:
+#        name: meshroom-webapp-${{ github.run_number }}
+#        path: dist/
+#        retention-days: 90
+#
+#    - name: Create release info
+#      if: github.ref == 'refs/heads/main'
+#      run: |
+#        echo "## Release ${{ github.sha }}" >> release-notes.md
+#        echo "" >> release-notes.md
+#        echo "### Changes in this build:" >> release-notes.md
+#        echo "- Commit: ${{ github.sha }}" >> release-notes.md
+#        echo "- Date: $(date -u)" >> release-notes.md
+#        echo "- Workflow: ${{ github.workflow }}" >> release-notes.md
+#
+#    - name: Upload release notes
+#      if: github.ref == 'refs/heads/main'
+#      uses: actions/upload-artifact@v4
+#      with:
+#        name: release-notes-${{ github.run_number }}
+#        path: release-notes.md
+#        retention-days: 365

@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field
 
 class JobStatus(Enum):
     """Job processing status enumeration."""
+
     PENDING = "pending"
     PROCESSING = "processing"
     COMPLETED = "completed"
@@ -28,17 +29,16 @@ class UploadRequest(BaseModel):
     quality: str = Field(
         default="medium",
         description="Processing quality level",
-        pattern="^(low|medium|high)$"
+        pattern="^(low|medium|high)$",
     )
     max_features: int = Field(
         default=1000,
         description="Maximum number of features to extract",
         ge=100,
-        le=10000
+        le=10000,
     )
     enable_gpu: bool = Field(
-        default=False,
-        description="Whether to enable GPU acceleration"
+        default=False, description="Whether to enable GPU acceleration"
     )
 
 

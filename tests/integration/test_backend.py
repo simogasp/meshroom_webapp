@@ -20,8 +20,7 @@ import requests
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -37,7 +36,7 @@ class BackendTester:
             backend_url: Base URL of the backend server
             timeout: Request timeout in seconds
         """
-        self.backend_url = backend_url.rstrip('/')
+        self.backend_url = backend_url.rstrip("/")
         self.timeout = timeout
         self.session = requests.Session()
 
@@ -49,7 +48,9 @@ class BackendTester:
             True if health check passes, False otherwise
         """
         try:
-            response = self.session.get(f"{self.backend_url}/health", timeout=self.timeout)
+            response = self.session.get(
+                f"{self.backend_url}/health", timeout=self.timeout
+            )
             if response.status_code == 200:
                 data = response.json()
                 if data.get("status") == "healthy":
@@ -97,14 +98,18 @@ class BackendTester:
             True if jobs endpoint works, False otherwise
         """
         try:
-            response = self.session.get(f"{self.backend_url}/jobs", timeout=self.timeout)
+            response = self.session.get(
+                f"{self.backend_url}/jobs", timeout=self.timeout
+            )
             if response.status_code == 200:
                 data = response.json()
                 if isinstance(data, list):
                     logger.info("Jobs endpoint test passed")
                     return True
                 else:
-                    logger.error(f"Jobs endpoint returned unexpected data type: {type(data)}")
+                    logger.error(
+                        f"Jobs endpoint returned unexpected data type: {type(data)}"
+                    )
                     return False
             else:
                 logger.error(f"Jobs endpoint failed: {response.status_code}")
@@ -122,12 +127,16 @@ class BackendTester:
         """
         try:
             fake_job_id = "nonexistent-job-id"
-            response = self.session.get(f"{self.backend_url}/jobs/{fake_job_id}", timeout=self.timeout)
+            response = self.session.get(
+                f"{self.backend_url}/jobs/{fake_job_id}", timeout=self.timeout
+            )
             if response.status_code == 404:
                 logger.info("Non-existent job test passed (proper 404)")
                 return True
             else:
-                logger.error(f"Non-existent job test failed: expected 404, got {response.status_code}")
+                logger.error(
+                    f"Non-existent job test failed: expected 404, got {response.status_code}"
+                )
                 return False
         except Exception as e:
             logger.error(f"Non-existent job test failed: {e}")
@@ -203,24 +212,21 @@ def main():
     parser.add_argument(
         "--backend-url",
         default="http://localhost:8000",
-        help="Backend URL to test (default: http://localhost:8000)"
+        help="Backend URL to test (default: http://localhost:8000)",
     )
     parser.add_argument(
-        "--timeout",
-        type=int,
-        default=5,
-        help="Request timeout in seconds (default: 5)"
+        "--timeout", type=int, default=5, help="Request timeout in seconds (default: 5)"
     )
     parser.add_argument(
         "--wait-for-backend",
         action="store_true",
-        help="Wait for backend to become available before testing"
+        help="Wait for backend to become available before testing",
     )
     parser.add_argument(
         "--max-wait",
         type=int,
         default=30,
-        help="Maximum time to wait for backend (default: 30s)"
+        help="Maximum time to wait for backend (default: 30s)",
     )
 
     args = parser.parse_args()

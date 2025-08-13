@@ -19,8 +19,7 @@ import websocket
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -40,16 +39,12 @@ class PhotogrammetryClient:
         Args:
             base_url: Base URL of the backend server
         """
-        self.base_url = base_url.rstrip('/')
+        self.base_url = base_url.rstrip("/")
         self.session = requests.Session()
-        ws_url = self.base_url.replace('http://', 'ws://').replace(
-            'https://', 'wss://'
-        )
+        ws_url = self.base_url.replace("http://", "ws://").replace("https://", "wss://")
         self.websocket_url = ws_url
 
-    def generate_dummy_image(
-        self, filename: str, size_kb: int = 1
-    ) -> bytes:
+    def generate_dummy_image(self, filename: str, size_kb: int = 1) -> bytes:
         """
         Generate dummy image data for testing.
 
@@ -62,8 +57,7 @@ class PhotogrammetryClient:
         """
         # Create the dummy JPEG-like header
         jpeg_header = (
-            b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01'
-            b'\x00H\x00H\x00\x00'
+            b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01" b"\x00H\x00H\x00\x00"
         )
 
         # Generate random data to reach desired size
@@ -72,12 +66,10 @@ class PhotogrammetryClient:
         # Account for end marker
 
         # nosec B311: Using random for test data generation only
-        random_data = bytes([
-            random.randint(0, 255) for _ in range(remaining_size)
-        ])
+        random_data = bytes([random.randint(0, 255) for _ in range(remaining_size)])
 
         # Add JPEG end marker
-        jpeg_end = b'\xff\xd9'
+        jpeg_end = b"\xff\xd9"
 
         return jpeg_header + random_data + jpeg_end
 
@@ -98,11 +90,9 @@ class PhotogrammetryClient:
             size_kb = random.randint(1, 10)  # Random size between 1-10 KB
             content = self.generate_dummy_image(filename, size_kb)
 
-            images.append({
-                'filename': filename,
-                'content': content,
-                'size_kb': size_kb
-            })
+            images.append(
+                {"filename": filename, "content": content, "size_kb": size_kb}
+            )
 
         logger.info(f"Generated {count} test images")
         return images
@@ -112,7 +102,7 @@ class PhotogrammetryClient:
         images: List[Dict[str, Any]],
         quality: str = "medium",
         max_features: int = 1000,
-        enable_gpu: bool = False
+        enable_gpu: bool = False,
     ) -> Optional[str]:
         """
         Upload images to the backend for processing.
@@ -131,19 +121,17 @@ class PhotogrammetryClient:
             files = []
             for image in images:
                 files.append(
-                    ('files', (image['filename'], image['content'], 'image/jpeg'))
+                    ("files", (image["filename"], image["content"], "image/jpeg"))
                 )
 
             # Prepare the form data
             data = {
-                'quality': quality,
-                'max_features': max_features,
-                'enable_gpu': enable_gpu
+                "quality": quality,
+                "max_features": max_features,
+                "enable_gpu": enable_gpu,
             }
 
-            logger.info(
-                f"Uploading {len(images)} images to {self.base_url}/upload"
-            )
+            logger.info(f"Uploading {len(images)} images to {self.base_url}/upload")
             logger.info(
                 f"Parameters: quality={quality}, "
                 f"max_features={max_features}, enable_gpu={enable_gpu}"
@@ -151,15 +139,12 @@ class PhotogrammetryClient:
 
             # Send upload request
             response = self.session.post(
-                f"{self.base_url}/upload",
-                files=files,
-                data=data,
-                timeout=30
+                f"{self.base_url}/upload", files=files, data=data, timeout=30
             )
 
             if response.status_code == 200:
                 result = response.json()
-                job_id: str = result['job_id']
+                job_id: str = result["job_id"]
                 logger.info(f"Upload successful! Job ID: {job_id}")
                 return job_id
             else:
@@ -213,13 +198,10 @@ class PhotogrammetryClient:
                 # client.py -> fake_frontend -> frontend -> src -> project_root
                 current_file = os.path.abspath(__file__)
                 project_root = os.path.dirname(
-                    os.path.dirname(
-                        os.path.dirname(os.path.dirname(current_file))
-                    )
+                    os.path.dirname(os.path.dirname(os.path.dirname(current_file)))
                 )
                 output_dir = os.path.join(
-                    project_root, "output", "frontend",
-                    "fake_frontend", "downloads"
+                    project_root, "output", "frontend", "fake_frontend", "downloads"
                 )
 
             # Create output directory
@@ -240,7 +222,7 @@ class PhotogrammetryClient:
                         filename = f"{job_id}_model.glb"
                         filepath = os.path.join(output_dir, filename)
 
-                        with open(filepath, 'wb') as f:
+                        with open(filepath, "wb") as f:
                             f.write(response.content)
 
                         logger.info(
@@ -249,8 +231,7 @@ class PhotogrammetryClient:
                         )
                         return filepath
                     elif (
-                        response.status_code == 400 and
-                        "not completed" in response.text
+                        response.status_code == 400 and "not completed" in response.text
                     ):
                         # Job status race condition - wait and retry
                         if attempt < max_retries - 1:
@@ -294,9 +275,7 @@ class PhotogrammetryClient:
             logger.error(f"Download error: {e}")
             return None
 
-    def monitor_progress_websocket(
-        self, job_id: str, timeout: int = 300
-    ) -> bool:
+    def monitor_progress_websocket(self, job_id: str, timeout: int = 300) -> bool:
         """
         Monitor job progress via WebSocket.
 
@@ -318,13 +297,13 @@ class PhotogrammetryClient:
             try:
                 data = json.loads(message)
 
-                if 'error' in data:
+                if "error" in data:
                     logger.error(f"WebSocket error: {data['error']}")
                     ws.close()
                     return
 
-                progress = data.get('progress', 0)
-                msg = data.get('message', '')
+                progress = data.get("progress", 0)
+                msg = data.get("message", "")
 
                 logger.info(f"Progress: {progress}% - {msg}")
 
@@ -353,7 +332,7 @@ class PhotogrammetryClient:
                 on_open=on_open,
                 on_message=on_message,
                 on_error=on_error,
-                on_close=on_close
+                on_close=on_close,
             )
 
             # Run WebSocket in a separate thread
@@ -384,10 +363,7 @@ class PhotogrammetryClient:
             return False
 
     def run_test_workflow(
-        self,
-        image_count: int = 5,
-        quality: str = "medium",
-        max_features: int = 1000
+        self, image_count: int = 5, quality: str = "medium", max_features: int = 1000
     ) -> bool:
         """
         Run a complete test workflow.
@@ -408,7 +384,7 @@ class PhotogrammetryClient:
             # Step 1: Generate test images
             logger.info("Step 1: Generating test images...")
             images = self.generate_test_images(image_count)
-            total_size_kb = sum(img['size_kb'] for img in images)
+            total_size_kb = sum(img["size_kb"] for img in images)
             logger.info(f"Generated {len(images)} images ({total_size_kb} KB total)")
 
             # Step 2: Upload images
@@ -430,7 +406,7 @@ class PhotogrammetryClient:
             status = self.get_job_status(job_id)
             if status:
                 logger.info(f"Final status: {status['status']}")
-                duration = status.get('duration_seconds', 'N/A')
+                duration = status.get("duration_seconds", "N/A")
                 logger.info(f"Processing time: {duration} seconds")
 
             # Step 5: Download model
@@ -477,11 +453,7 @@ def main():
     logger.info("")
 
     # Run test workflow
-    success = client.run_test_workflow(
-        image_count=8,
-        quality="high",
-        max_features=2000
-    )
+    success = client.run_test_workflow(image_count=8, quality="high", max_features=2000)
 
     if success:
         logger.info("\n✅ All tests passed!")

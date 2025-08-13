@@ -47,9 +47,9 @@ def generate_dummy_model(job_id: str) -> bytes:
     model_data = bytes([random.randint(0, 255) for _ in range(1024)])
 
     # Add job ID as metadata (for identification)
-    metadata = f"Generated for job: {job_id}".encode('utf-8')
+    metadata = f"Generated for job: {job_id}".encode("utf-8")
 
-    return header + len(metadata).to_bytes(4, 'little') + metadata + model_data
+    return header + len(metadata).to_bytes(4, "little") + metadata + model_data
 
 
 class JobManager:
@@ -71,7 +71,8 @@ class JobManager:
     def active_jobs_count(self) -> int:
         """Get count of active (non-completed) jobs."""
         return sum(
-            1 for job in self._jobs.values()
+            1
+            for job in self._jobs.values()
             if job.status in [JobStatus.PENDING, JobStatus.PROCESSING]
         )
 
@@ -198,7 +199,7 @@ class JobManager:
                 ("Matching features", 45, 65),
                 ("Bundle adjustment", 65, 80),
                 ("Dense reconstruction", 80, 95),
-                ("Mesh generation", 95, 100)
+                ("Mesh generation", 95, 100),
             ]
 
             for stage_name, start_progress, end_progress in stages:
@@ -225,9 +226,7 @@ class JobManager:
             job.status = JobStatus.COMPLETED
             job.completed_at = datetime.now()
             job.progress = 100
-            result_path = (
-                f"output/backend/fake_backend/models/{job_id}_model.glb"
-            )
+            result_path = f"output/backend/fake_backend/models/{job_id}_model.glb"
             job.result_file_path = result_path
 
             # Send completion message AFTER the status is updated
@@ -236,9 +235,7 @@ class JobManager:
             )
             await self._send_progress_update(job_id, 100, completion_msg)
 
-            logger.info(
-                f"Job {job_id} completed in {job.duration_seconds:.1f} seconds"
-            )
+            logger.info(f"Job {job_id} completed in {job.duration_seconds:.1f} seconds")
 
         except asyncio.CancelledError:
             job.status = JobStatus.FAILED
@@ -269,11 +266,7 @@ class JobManager:
         if job_id not in self._job_subscriptions:
             return
 
-        update = ProgressUpdate(
-            job_id=job_id,
-            progress=progress,
-            message=message
-        )
+        update = ProgressUpdate(job_id=job_id, progress=progress, message=message)
 
         # Send it to all subscribed connections
         connection_ids = list(self._job_subscriptions[job_id])
@@ -287,13 +280,9 @@ class JobManager:
             websocket = self._connections[connection_id]
             try:
                 await websocket.send_text(update.model_dump_json())
-                logger.debug(
-                    f"Sent progress update to {connection_id}: {progress}%"
-                )
+                logger.debug(f"Sent progress update to {connection_id}: {progress}%")
             except Exception as e:
-                logger.warning(
-                    f"Failed to send update to {connection_id}: {e}"
-                )
+                logger.warning(f"Failed to send update to {connection_id}: {e}")
                 disconnected_connections.append(connection_id)
 
         # Clean up disconnected connections
@@ -321,8 +310,6 @@ class JobManager:
         job.status = JobStatus.FAILED
         job.error_message = "Cancelled by user"
 
-        await self._send_progress_update(
-            job_id, job.progress, "Job cancelled"
-        )
+        await self._send_progress_update(job_id, job.progress, "Job cancelled")
         logger.info(f"Cancelled job {job_id}")
         return True

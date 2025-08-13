@@ -32,18 +32,18 @@ def setup_logging(verbose_level: str):
         verbose_level: Logging level (DEBUG, INFO, WARNING, ERROR)
     """
     level_map = {
-        'DEBUG': logging.DEBUG,
-        'INFO': logging.INFO,
-        'WARNING': logging.WARNING,
-        'ERROR': logging.ERROR
+        "DEBUG": logging.DEBUG,
+        "INFO": logging.INFO,
+        "WARNING": logging.WARNING,
+        "ERROR": logging.ERROR,
     }
 
     level = level_map.get(verbose_level.upper(), logging.INFO)
 
     logging.basicConfig(
         level=level,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        force=True
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        force=True,
     )
 
 
@@ -92,7 +92,7 @@ class TestRunner:
                 cwd=self.project_root,
                 capture_output=True,
                 text=True,
-                timeout=300  # 5 minute timeout
+                timeout=300,  # 5 minute timeout
             )
 
             if result.returncode == 0:
@@ -117,9 +117,11 @@ class TestRunner:
     def ensure_backend_stopped(self):
         """Ensure the backend is stopped before tests."""
         logger.debug("Ensuring backend is stopped...")
-        subprocess.run([
-            sys.executable, str(self.backend_manager), "stop"
-        ], cwd=self.project_root, capture_output=True)
+        subprocess.run(
+            [sys.executable, str(self.backend_manager), "stop"],
+            cwd=self.project_root,
+            capture_output=True,
+        )
 
     def check_test_dependencies(self) -> bool:
         """
@@ -133,7 +135,9 @@ class TestRunner:
         # Check if requirements-test.txt exists
         test_requirements = self.project_root / "requirements-test.txt"
         if not test_requirements.exists():
-            logger.error("requirements-test.txt not found. Please install test dependencies.")
+            logger.error(
+                "requirements-test.txt not found. Please install test dependencies."
+            )
             return False
 
         # Try to import key testing modules
@@ -142,9 +146,9 @@ class TestRunner:
 
         for module in required_modules:
             try:
-                result = subprocess.run([
-                    sys.executable, "-c", f"import {module}"
-                ], capture_output=True)
+                result = subprocess.run(
+                    [sys.executable, "-c", f"import {module}"], capture_output=True
+                )
                 if result.returncode != 0:
                     missing_modules.append(module)
             except Exception:
@@ -178,19 +182,25 @@ class TestRunner:
         results = []
 
         # Backend startup test
-        success, _ = self.run_command([
-            sys.executable, str(self.backend_manager), "start"
-        ], "Backend startup")
+        success, _ = self.run_command(
+            [sys.executable, str(self.backend_manager), "start"], "Backend startup"
+        )
 
         if not success:
             return False
 
         try:
             # Backend integration tests
-            success, _ = self.run_command([
-                sys.executable, str(self.backend_tests),
-                "--wait-for-backend", "--max-wait", "30"
-            ], "Backend integration tests")
+            success, _ = self.run_command(
+                [
+                    sys.executable,
+                    str(self.backend_tests),
+                    "--wait-for-backend",
+                    "--max-wait",
+                    "30",
+                ],
+                "Backend integration tests",
+            )
             results.append(("Backend Integration", success))
 
             # Client integration tests
@@ -203,9 +213,9 @@ class TestRunner:
 
         finally:
             # Always stop backend
-            self.run_command([
-                sys.executable, str(self.backend_manager), "stop"
-            ], "Backend shutdown")
+            self.run_command(
+                [sys.executable, str(self.backend_manager), "stop"], "Backend shutdown"
+            )
 
         # Summary
         passed = sum(1 for _, success in results if success)
@@ -255,9 +265,9 @@ class TestRunner:
         logger.info("RUNNING SECURITY TESTS")
         logger.info("=" * 60)
 
-        success, _ = self.run_command([
-            sys.executable, str(self.security_tests)
-        ], "Security tests")
+        success, _ = self.run_command(
+            [sys.executable, str(self.security_tests)], "Security tests"
+        )
         return success
 
     def run_all_tests(self, quick: bool = False, fix_issues: bool = False) -> bool:
@@ -287,7 +297,9 @@ class TestRunner:
 
         # Run all test suites
         results.append(("Integration Tests", self.run_integration_tests(quick=quick)))
-        results.append(("Code Quality Tests", self.run_quality_tests(fix_issues=fix_issues)))
+        results.append(
+            ("Code Quality Tests", self.run_quality_tests(fix_issues=fix_issues))
+        )
         results.append(("Security Tests", self.run_security_tests()))
 
         # Final summary
@@ -322,45 +334,37 @@ def main():
     # Test type selection (mutually exclusive group)
     test_group = parser.add_mutually_exclusive_group()
     test_group.add_argument(
-        "--integration",
-        action="store_true",
-        help="Run integration tests only"
+        "--integration", action="store_true", help="Run integration tests only"
     )
     test_group.add_argument(
-        "--quality",
-        action="store_true",
-        help="Run code quality tests only"
+        "--quality", action="store_true", help="Run code quality tests only"
     )
     test_group.add_argument(
-        "--security",
-        action="store_true",
-        help="Run security tests only"
+        "--security", action="store_true", help="Run security tests only"
     )
 
     # Test modifiers
     parser.add_argument(
         "--quick",
         action="store_true",
-        help="Run quick integration tests (faster execution)"
+        help="Run quick integration tests (faster execution)",
     )
     parser.add_argument(
         "--fix",
         action="store_true",
-        help="Automatically fix code quality issues when possible"
+        help="Automatically fix code quality issues when possible",
     )
 
     # General options
     parser.add_argument(
-        "--project-root",
-        type=Path,
-        help="Path to project root directory"
+        "--project-root", type=Path, help="Path to project root directory"
     )
     parser.add_argument(
         "--verbose",
         type=str,
         default="INFO",
         choices=["DEBUG", "INFO", "WARNING", "ERROR"],
-        help="Set the verbosity level"
+        help="Set the verbosity level",
     )
 
     args = parser.parse_args()

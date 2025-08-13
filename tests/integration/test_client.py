@@ -25,8 +25,7 @@ import websocket
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -42,10 +41,12 @@ class ClientIntegrationTester:
             backend_url: Base URL of the backend server
             timeout: Request timeout in seconds
         """
-        self.backend_url = backend_url.rstrip('/')
+        self.backend_url = backend_url.rstrip("/")
         self.timeout = timeout
         self.session = requests.Session()
-        self.websocket_url = self.backend_url.replace('http://', 'ws://').replace('https://', 'wss://')
+        self.websocket_url = self.backend_url.replace("http://", "ws://").replace(
+            "https://", "wss://"
+        )
 
     def generate_test_image(self, filename: str, size_kb: int = 1) -> bytes:
         """
@@ -59,7 +60,7 @@ class ClientIntegrationTester:
             Dummy image data as bytes
         """
         # Create minimal JPEG-like header
-        jpeg_header = b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00H\x00H\x00\x00'
+        jpeg_header = b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00H\x00H\x00\x00"
 
         # Generate random data
         target_size = size_kb * 1024
@@ -67,7 +68,7 @@ class ClientIntegrationTester:
         random_data = bytes([random.randint(0, 255) for _ in range(remaining_size)])
 
         # Add JPEG end marker
-        jpeg_end = b'\xff\xd9'
+        jpeg_end = b"\xff\xd9"
 
         return jpeg_header + random_data + jpeg_end
 
@@ -90,25 +91,25 @@ class ClientIntegrationTester:
                 filename = f"test_image_{i+1:03d}.jpg"
                 size_kb = random.randint(1, 5)  # Small test images
                 content = self.generate_test_image(filename, size_kb)
-                files.append(('files', (filename, content, 'image/jpeg')))
+                files.append(("files", (filename, content, "image/jpeg")))
 
             # Upload parameters
             data = {
-                'quality': 'medium',
-                'max_features': 500,  # Smaller for faster testing
-                'enable_gpu': False
+                "quality": "medium",
+                "max_features": 500,  # Smaller for faster testing
+                "enable_gpu": False,
             }
 
             response = self.session.post(
                 f"{self.backend_url}/upload",
                 files=files,
                 data=data,
-                timeout=self.timeout
+                timeout=self.timeout,
             )
 
             if response.status_code == 200:
                 result = response.json()
-                job_id = result.get('job_id')
+                job_id = result.get("job_id")
                 if job_id:
                     logger.info(f"Image upload successful, job ID: {job_id}")
                     return job_id
@@ -116,7 +117,9 @@ class ClientIntegrationTester:
                     logger.error("Upload response missing job_id")
                     return None
             else:
-                logger.error(f"Image upload failed: {response.status_code} - {response.text}")
+                logger.error(
+                    f"Image upload failed: {response.status_code} - {response.text}"
+                )
                 return None
 
         except Exception as e:
@@ -136,18 +139,24 @@ class ClientIntegrationTester:
         try:
             logger.info("Testing job status polling...")
 
-            response = self.session.get(f"{self.backend_url}/jobs/{job_id}", timeout=self.timeout)
+            response = self.session.get(
+                f"{self.backend_url}/jobs/{job_id}", timeout=self.timeout
+            )
 
             if response.status_code == 200:
                 status_data = response.json()
-                required_fields = ['job_id', 'status', 'progress', 'created_at']
+                required_fields = ["job_id", "status", "progress", "created_at"]
 
                 for field in required_fields:
                     if field not in status_data:
-                        logger.error(f"Missing required field in status response: {field}")
+                        logger.error(
+                            f"Missing required field in status response: {field}"
+                        )
                         return False
 
-                logger.info(f"Job status polling works, status: {status_data['status']}")
+                logger.info(
+                    f"Job status polling works, status: {status_data['status']}"
+                )
                 return True
             else:
                 logger.error(f"Job status polling failed: {response.status_code}")
@@ -181,7 +190,7 @@ class ClientIntegrationTester:
                     data = json.loads(message)
                     received_messages.append(data)
 
-                    if 'job_id' in data and data['job_id'] == job_id:
+                    if "job_id" in data and data["job_id"] == job_id:
                         connection_successful = True
 
                     if quick_test and connection_successful:
@@ -205,7 +214,7 @@ class ClientIntegrationTester:
                 on_open=on_open,
                 on_message=on_message,
                 on_error=on_error,
-                on_close=on_close
+                on_close=on_close,
             )
 
             # Run WebSocket with timeout
@@ -228,7 +237,9 @@ class ClientIntegrationTester:
             ws.close()
 
             if connection_successful:
-                logger.info(f"WebSocket test passed, received {len(received_messages)} messages")
+                logger.info(
+                    f"WebSocket test passed, received {len(received_messages)} messages"
+                )
                 return True
             else:
                 logger.error("WebSocket test failed - no valid messages received")
@@ -254,13 +265,15 @@ class ClientIntegrationTester:
 
             # Wait for job to complete
             for i in range(max_wait):
-                response = self.session.get(f"{self.backend_url}/jobs/{job_id}", timeout=self.timeout)
+                response = self.session.get(
+                    f"{self.backend_url}/jobs/{job_id}", timeout=self.timeout
+                )
                 if response.status_code == 200:
                     status_data = response.json()
-                    if status_data.get('status') == 'completed':
+                    if status_data.get("status") == "completed":
                         logger.info(f"Job completed after {i + 1}s")
                         break
-                    elif status_data.get('status') == 'failed':
+                    elif status_data.get("status") == "failed":
                         logger.error("Job failed during processing")
                         return False
 
@@ -271,7 +284,9 @@ class ClientIntegrationTester:
                 return False
 
             # Test download
-            response = self.session.get(f"{self.backend_url}/jobs/{job_id}/download", timeout=self.timeout)
+            response = self.session.get(
+                f"{self.backend_url}/jobs/{job_id}/download", timeout=self.timeout
+            )
 
             if response.status_code == 200:
                 content = response.content
@@ -354,18 +369,16 @@ def main():
     parser.add_argument(
         "--backend-url",
         default="http://localhost:8000",
-        help="Backend URL to test (default: http://localhost:8000)"
+        help="Backend URL to test (default: http://localhost:8000)",
     )
     parser.add_argument(
         "--timeout",
         type=int,
         default=10,
-        help="Request timeout in seconds (default: 10)"
+        help="Request timeout in seconds (default: 10)",
     )
     parser.add_argument(
-        "--quick",
-        action="store_true",
-        help="Run quick tests only (no full workflow)"
+        "--quick", action="store_true", help="Run quick tests only (no full workflow)"
     )
 
     args = parser.parse_args()

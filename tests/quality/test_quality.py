@@ -20,8 +20,7 @@ from typing import List, Tuple
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -29,7 +28,9 @@ logger = logging.getLogger(__name__)
 class QualityTester:
     """Runs code quality tests for the Meshroom WebApp project."""
 
-    def __init__(self, project_root: Path, output_dir: Path = None, fix_issues: bool = False):
+    def __init__(
+        self, project_root: Path, output_dir: Path = None, fix_issues: bool = False
+    ):
         """
         Initialize the quality tester.
 
@@ -55,28 +56,28 @@ class QualityTester:
         try:
             # Basic flake8 configuration
             flake8_args = [
-                sys.executable, "-m", "flake8",
-                "src/", "tests/",
+                sys.executable,
+                "-m",
+                "flake8",
+                "src/",
+                "tests/",
                 "--count",
                 "--statistics",
                 "--max-line-length=88",
                 "--extend-ignore=E203,W503",  # Compatible with black formatter
                 "--exclude=__pycache__,.git,.tox,dist,*.egg",
-                "--format=%(path)s:%(row)d:%(col)d: %(code)s %(text)s"
+                "--format=%(path)s:%(row)d:%(col)d: %(code)s %(text)s",
             ]
 
             # Save output to file
             output_file = self.output_dir / "flake8_report.txt"
 
             result = subprocess.run(
-                flake8_args,
-                capture_output=True,
-                text=True,
-                cwd=self.project_root
+                flake8_args, capture_output=True, text=True, cwd=self.project_root
             )
 
             # Save report
-            with open(output_file, 'w') as f:
+            with open(output_file, "w") as f:
                 f.write(f"Flake8 Report\n")
                 f.write(f"=============\n\n")
                 f.write(f"Return code: {result.returncode}\n\n")
@@ -108,27 +109,26 @@ class QualityTester:
 
         try:
             mypy_args = [
-                sys.executable, "-m", "mypy",
+                sys.executable,
+                "-m",
+                "mypy",
                 "src/",
                 "--ignore-missing-imports",
                 "--strict-optional",
                 "--warn-redundant-casts",
                 "--warn-unused-ignores",
-                "--show-error-codes"
+                "--show-error-codes",
             ]
 
             # Save output to file
             output_file = self.output_dir / "mypy_report.txt"
 
             result = subprocess.run(
-                mypy_args,
-                capture_output=True,
-                text=True,
-                cwd=self.project_root
+                mypy_args, capture_output=True, text=True, cwd=self.project_root
             )
 
             # Save report
-            with open(output_file, 'w') as f:
+            with open(output_file, "w") as f:
                 f.write(f"MyPy Report\n")
                 f.write(f"===========\n\n")
                 f.write(f"Return code: {result.returncode}\n\n")
@@ -161,10 +161,13 @@ class QualityTester:
 
         try:
             black_args = [
-                sys.executable, "-m", "black",
-                "src/", "tests/",
+                sys.executable,
+                "-m",
+                "black",
+                "src/",
+                "tests/",
                 "--line-length=88",
-                "--target-version=py39"
+                "--target-version=py39",
             ]
 
             if not self.fix_issues:
@@ -174,14 +177,11 @@ class QualityTester:
             output_file = self.output_dir / "black_report.txt"
 
             result = subprocess.run(
-                black_args,
-                capture_output=True,
-                text=True,
-                cwd=self.project_root
+                black_args, capture_output=True, text=True, cwd=self.project_root
             )
 
             # Save report
-            with open(output_file, 'w') as f:
+            with open(output_file, "w") as f:
                 f.write(f"Black Report\n")
                 f.write(f"============\n\n")
                 f.write(f"Return code: {result.returncode}\n\n")
@@ -220,10 +220,13 @@ class QualityTester:
 
         try:
             isort_args = [
-                sys.executable, "-m", "isort",
-                "src/", "tests/",
+                sys.executable,
+                "-m",
+                "isort",
+                "src/",
+                "tests/",
                 "--profile=black",
-                "--line-length=88"
+                "--line-length=88",
             ]
 
             if not self.fix_issues:
@@ -233,14 +236,11 @@ class QualityTester:
             output_file = self.output_dir / "isort_report.txt"
 
             result = subprocess.run(
-                isort_args,
-                capture_output=True,
-                text=True,
-                cwd=self.project_root
+                isort_args, capture_output=True, text=True, cwd=self.project_root
             )
 
             # Save report
-            with open(output_file, 'w') as f:
+            with open(output_file, "w") as f:
                 f.write(f"isort Report\n")
                 f.write(f"============\n\n")
                 f.write(f"Return code: {result.returncode}\n\n")
@@ -320,44 +320,40 @@ class QualityTester:
 
 def main():
     """Main entry point for code quality testing."""
-    parser = argparse.ArgumentParser(description="Run code quality tests for Meshroom WebApp")
-    parser.add_argument(
-        "--project-root",
-        type=Path,
-        help="Path to project root directory"
+    parser = argparse.ArgumentParser(
+        description="Run code quality tests for Meshroom WebApp"
     )
     parser.add_argument(
-        "--output-dir",
-        type=Path,
-        help="Directory to save quality reports"
+        "--project-root", type=Path, help="Path to project root directory"
     )
     parser.add_argument(
-        "--fix",
-        action="store_true",
-        help="Automatically fix issues when possible"
+        "--output-dir", type=Path, help="Directory to save quality reports"
+    )
+    parser.add_argument(
+        "--fix", action="store_true", help="Automatically fix issues when possible"
     )
     parser.add_argument(
         "--verbose",
         type=str,
         default="INFO",
         choices=["DEBUG", "INFO", "WARNING", "ERROR"],
-        help="Set the verbosity level"
+        help="Set the verbosity level",
     )
 
     args = parser.parse_args()
 
     # Setup logging
     level_map = {
-        'DEBUG': logging.DEBUG,
-        'INFO': logging.INFO,
-        'WARNING': logging.WARNING,
-        'ERROR': logging.ERROR
+        "DEBUG": logging.DEBUG,
+        "INFO": logging.INFO,
+        "WARNING": logging.WARNING,
+        "ERROR": logging.ERROR,
     }
 
     logging.basicConfig(
         level=level_map[args.verbose],
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        force=True
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        force=True,
     )
 
     # Determine project root

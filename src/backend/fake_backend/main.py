@@ -16,9 +16,7 @@ from typing import List
 # Add the parent directory to the path for imports when running directly
 if __name__ == "__main__":
     sys.path.append(
-        os.path.dirname(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        )
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     )
 
 from fastapi import (
@@ -49,8 +47,7 @@ except ImportError:
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -58,7 +55,7 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title="Fake Photogrammetry Backend",
     description="Simulated photogrammetry processing backend for testing",
-    version="0.1.0"
+    version="0.1.0",
 )
 
 # Add CORS middleware for web frontend compatibility
@@ -78,12 +75,8 @@ job_manager = JobManager()
 project_root = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
-uploads_dir = os.path.join(
-    project_root, "output", "backend", "fake_backend", "uploads"
-)
-models_dir = os.path.join(
-    project_root, "output", "backend", "fake_backend", "models"
-)
+uploads_dir = os.path.join(project_root, "output", "backend", "fake_backend", "uploads")
+models_dir = os.path.join(project_root, "output", "backend", "fake_backend", "models")
 
 os.makedirs(uploads_dir, exist_ok=True)
 os.makedirs(models_dir, exist_ok=True)
@@ -117,7 +110,7 @@ async def root():
         "status": "running",
         "active_jobs": job_manager.active_jobs_count,
         "total_jobs": job_manager.total_jobs_count,
-        "timestamp": datetime.now().isoformat()
+        "timestamp": datetime.now().isoformat(),
     }
 
 
@@ -129,10 +122,7 @@ async def health_check():
     Returns:
         Service health status
     """
-    return {
-        "status": "healthy",
-        "timestamp": datetime.now().isoformat()
-    }
+    return {"status": "healthy", "timestamp": datetime.now().isoformat()}
 
 
 @app.post("/upload", response_model=JobResponse)
@@ -140,7 +130,7 @@ async def upload_images(
     files: List[UploadFile] = File(...),
     quality: str = Form("medium"),
     max_features: int = Form(1000),
-    enable_gpu: bool = Form(False)
+    enable_gpu: bool = Form(False),
 ):
     """
     Upload images for photogrammetry processing.
@@ -160,9 +150,7 @@ async def upload_images(
     try:
         # Validate request parameters
         request_data = UploadRequest(
-            quality=quality,
-            max_features=max_features,
-            enable_gpu=enable_gpu
+            quality=quality, max_features=max_features, enable_gpu=enable_gpu
         )
 
         if not files:
@@ -170,8 +158,7 @@ async def upload_images(
 
         if len(files) > 100:
             raise HTTPException(
-                status_code=400,
-                detail="Too many files (maximum 100 allowed)"
+                status_code=400, detail="Too many files (maximum 100 allowed)"
             )
 
         # Process uploaded files
@@ -190,8 +177,7 @@ async def upload_images(
             # Check file size limits
             if file_size > 50 * 1024 * 1024:  # 50MB per file
                 raise HTTPException(
-                    status_code=400,
-                    detail=f"File {file.filename} too large (max 50MB)"
+                    status_code=400, detail=f"File {file.filename} too large (max 50MB)"
                 )
 
             # Save uploaded file to the uploads directory
@@ -204,25 +190,20 @@ async def upload_images(
                 filename=file.filename,
                 content=content,
                 content_type=file.content_type or "application/octet-stream",
-                size=file_size
+                size=file_size,
             )
             images.append(image_data)
 
-            logger.info(
-                f"Uploaded {file.filename}: {file_size} bytes -> {upload_path}"
-            )
+            logger.info(f"Uploaded {file.filename}: {file_size} bytes -> {upload_path}")
 
         # Check total upload size
         if total_size > 500 * 1024 * 1024:  # 500MB total
             raise HTTPException(
-                status_code=400,
-                detail="Total upload size too large (max 500MB)"
+                status_code=400, detail="Total upload size too large (max 500MB)"
             )
 
         if not images:
-            raise HTTPException(
-                status_code=400, detail="No valid images provided"
-            )
+            raise HTTPException(status_code=400, detail="No valid images provided")
 
         # Create the processing job
         job = ProcessingJob(
@@ -230,8 +211,8 @@ async def upload_images(
             parameters={
                 "quality": request_data.quality,
                 "max_features": request_data.max_features,
-                "enable_gpu": request_data.enable_gpu
-            }
+                "enable_gpu": request_data.enable_gpu,
+            },
         )
 
         # Register job with manager
@@ -248,16 +229,14 @@ async def upload_images(
         return JobResponse(
             job_id=job_id,
             status=job.status.value,
-            created_at=job.created_at.isoformat()
+            created_at=job.created_at.isoformat(),
         )
 
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Upload failed: {e}")
-        raise HTTPException(
-            status_code=500, detail="Internal server error"
-        )
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.get("/jobs/{job_id}")
@@ -284,14 +263,12 @@ async def get_job_status(job_id: str):
         "progress": job.progress,
         "created_at": job.created_at.isoformat(),
         "started_at": job.started_at.isoformat() if job.started_at else None,
-        "completed_at": (
-            job.completed_at.isoformat() if job.completed_at else None
-        ),
+        "completed_at": (job.completed_at.isoformat() if job.completed_at else None),
         "total_images": job.total_images,
         "total_size_mb": round(job.total_size_mb, 2),
         "duration_seconds": job.duration_seconds,
         "error_message": job.error_message,
-        "result_file_path": job.result_file_path
+        "result_file_path": job.result_file_path,
     }
 
 
@@ -315,8 +292,7 @@ async def download_model(job_id: str):
 
     if not job.is_completed:
         raise HTTPException(
-            status_code=400,
-            detail=f"Job not completed (status: {job.status.value})"
+            status_code=400, detail=f"Job not completed (status: {job.status.value})"
         )
 
     # Generate the dummy model file
@@ -333,9 +309,7 @@ async def download_model(job_id: str):
     )
 
     return FileResponse(
-        path=model_path,
-        filename=f"{job_id}_model.glb",
-        media_type="model/gltf-binary"
+        path=model_path, filename=f"{job_id}_model.glb", media_type="model/gltf-binary"
     )
 
 
@@ -356,8 +330,7 @@ async def cancel_job(job_id: str):
     success = await job_manager.cancel_job(job_id)
     if not success:
         raise HTTPException(
-            status_code=400,
-            detail="Job not found or cannot be cancelled"
+            status_code=400, detail="Job not found or cannot be cancelled"
         )
 
     return {"message": f"Job {job_id} cancelled successfully"}
@@ -379,7 +352,7 @@ async def list_jobs():
             "progress": job.progress,
             "created_at": job.created_at.isoformat(),
             "total_images": job.total_images,
-            "total_size_mb": round(job.total_size_mb, 2)
+            "total_size_mb": round(job.total_size_mb, 2),
         }
         for job in jobs
     ]
@@ -406,12 +379,8 @@ async def websocket_endpoint(websocket: WebSocket, job_id: str):
             return
 
         # Register WebSocket connection
-        connection_id = await job_manager.register_websocket(
-            websocket, job_id
-        )
-        logger.info(
-            f"WebSocket connected for job {job_id}: {connection_id}"
-        )
+        connection_id = await job_manager.register_websocket(websocket, job_id)
+        logger.info(f"WebSocket connected for job {job_id}: {connection_id}")
 
         # Send initial status
         initial_msg = (
@@ -434,9 +403,7 @@ async def websocket_endpoint(websocket: WebSocket, job_id: str):
             except WebSocketDisconnect:
                 break
             except Exception as e:
-                logger.warning(
-                    f"WebSocket error for {connection_id}: {e}"
-                )
+                logger.warning(f"WebSocket error for {connection_id}: {e}")
                 break
 
     except Exception as e:
@@ -455,10 +422,4 @@ if __name__ == "__main__":
     # For development/testing, use 0.0.0.0 only if explicitly needed
     host = "127.0.0.1"  # Changed from "0.0.0.0" for security
 
-    uvicorn.run(
-        "main:app",
-        host=host,
-        port=8000,
-        reload=True,
-        log_level="info"
-    )
+    uvicorn.run("main:app", host=host, port=8000, reload=True, log_level="info")

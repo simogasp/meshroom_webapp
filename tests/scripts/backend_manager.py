@@ -26,8 +26,7 @@ import requests
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -75,7 +74,7 @@ class BackendManager:
         """
         try:
             if self.pid_file.exists():
-                with open(self.pid_file, 'r') as f:
+                with open(self.pid_file, "r") as f:
                     pid = int(f.read().strip())
 
                 # Check if the process is actually running
@@ -119,11 +118,11 @@ class BackendManager:
                 cwd=self.backend_dir,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
-                preexec_fn=os.setsid  # Create a new process group
+                preexec_fn=os.setsid,  # Create a new process group
             )
 
             # Save PID
-            with open(self.pid_file, 'w') as f:
+            with open(self.pid_file, "w") as f:
                 f.write(str(process.pid))
 
             # Wait for the backend to be ready
@@ -155,7 +154,9 @@ class BackendManager:
                 logger.info("Backend is not running")
                 return True
             else:
-                logger.warning("Backend running but PID unknown, trying to stop anyway...")
+                logger.warning(
+                    "Backend running but PID unknown, trying to stop anyway..."
+                )
                 return self._force_stop()
 
         try:
@@ -198,13 +199,11 @@ class BackendManager:
         try:
             # Try to find and kill processes using the port
             result = subprocess.run(
-                ["lsof", "-ti", f":{self.port}"],
-                capture_output=True,
-                text=True
+                ["lsof", "-ti", f":{self.port}"], capture_output=True, text=True
             )
 
             if result.returncode == 0 and result.stdout.strip():
-                pids = result.stdout.strip().split('\n')
+                pids = result.stdout.strip().split("\n")
                 for pid in pids:
                     try:
                         os.kill(int(pid), signal.SIGTERM)
@@ -259,7 +258,7 @@ class BackendManager:
             "running": running,
             "pid": pid,
             "url": self.base_url,
-            "pid_file": str(self.pid_file)
+            "pid_file": str(self.pid_file),
         }
 
         if running:
@@ -279,23 +278,14 @@ def main():
     parser.add_argument(
         "action",
         choices=["start", "stop", "status", "wait", "restart"],
-        help="Action to perform"
+        help="Action to perform",
+    )
+    parser.add_argument("--backend-dir", help="Path to backend directory")
+    parser.add_argument(
+        "--port", type=int, default=8000, help="Backend port (default: 8000)"
     )
     parser.add_argument(
-        "--backend-dir",
-        help="Path to backend directory"
-    )
-    parser.add_argument(
-        "--port",
-        type=int,
-        default=8000,
-        help="Backend port (default: 8000)"
-    )
-    parser.add_argument(
-        "--timeout",
-        type=int,
-        default=30,
-        help="Timeout for wait action (default: 30s)"
+        "--timeout", type=int, default=30, help="Timeout for wait action (default: 30s)"
     )
 
     args = parser.parse_args()
@@ -332,7 +322,7 @@ def main():
             logger.info(f"  Service: {status['info'].get('service', 'Unknown')}")
             logger.info(f"  Version: {status['info'].get('version', 'Unknown')}")
 
-        sys.exit(0 if status['running'] else 1)
+        sys.exit(0 if status["running"] else 1)
 
 
 if __name__ == "__main__":

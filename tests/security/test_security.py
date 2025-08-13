@@ -20,8 +20,7 @@ from typing import Dict, List, Optional, Tuple
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -52,15 +51,24 @@ class SecurityTester:
 
         try:
             # Run safety check with JSON output
-            result = subprocess.run([
-                sys.executable, "-m", "safety", "check",
-                "--json",
-                "-r", str(self.project_root / "requirements.txt")
-            ], capture_output=True, text=True, cwd=self.project_root)
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "safety",
+                    "check",
+                    "--json",
+                    "-r",
+                    str(self.project_root / "requirements.txt"),
+                ],
+                capture_output=True,
+                text=True,
+                cwd=self.project_root,
+            )
 
             # Save raw output
             safety_report = self.output_dir / "safety_report.json"
-            with open(safety_report, 'w') as f:
+            with open(safety_report, "w") as f:
                 f.write(result.stdout)
 
             logger.info(f"Safety report saved to: {safety_report}")
@@ -72,14 +80,18 @@ class SecurityTester:
             else:
                 try:
                     vulnerabilities = json.loads(result.stdout) if result.stdout else []
-                    logger.warning(f"Found {len(vulnerabilities)} security vulnerabilities")
+                    logger.warning(
+                        f"Found {len(vulnerabilities)} security vulnerabilities"
+                    )
 
                     # Log summary of vulnerabilities
                     for vuln in vulnerabilities:
-                        package = vuln.get('package', 'Unknown')
-                        version = vuln.get('installed_version', 'Unknown')
-                        vulnerability_id = vuln.get('vulnerability_id', 'Unknown')
-                        logger.warning(f"Vulnerability in {package} {version}: {vulnerability_id}")
+                        package = vuln.get("package", "Unknown")
+                        version = vuln.get("installed_version", "Unknown")
+                        vulnerability_id = vuln.get("vulnerability_id", "Unknown")
+                        logger.warning(
+                            f"Vulnerability in {package} {version}: {vulnerability_id}"
+                        )
 
                     return False, vulnerabilities
                 except json.JSONDecodeError:
@@ -104,22 +116,32 @@ class SecurityTester:
             bandit_report = self.output_dir / "bandit_report.json"
 
             # Run bandit scan
-            result = subprocess.run([
-                sys.executable, "-m", "bandit",
-                "-r", "src/",
-                "-f", "json",
-                "-o", str(bandit_report)
-            ], capture_output=True, text=True, cwd=self.project_root)
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "bandit",
+                    "-r",
+                    "src/",
+                    "-f",
+                    "json",
+                    "-o",
+                    str(bandit_report),
+                ],
+                capture_output=True,
+                text=True,
+                cwd=self.project_root,
+            )
 
             logger.info(f"Bandit report saved to: {bandit_report}")
 
             # Parse results
             if bandit_report.exists():
-                with open(bandit_report, 'r') as f:
+                with open(bandit_report, "r") as f:
                     scan_data = json.load(f)
 
-                issues = scan_data.get('results', [])
-                metrics = scan_data.get('metrics', {})
+                issues = scan_data.get("results", [])
+                metrics = scan_data.get("metrics", {})
 
                 # Log summary
                 total_issues = len(issues)
@@ -132,25 +154,32 @@ class SecurityTester:
 
                 # Log high-severity issues
                 high_severity_issues = [
-                    issue for issue in issues
-                    if issue.get('issue_severity', '').lower() in ['high', 'medium']
+                    issue
+                    for issue in issues
+                    if issue.get("issue_severity", "").lower() in ["high", "medium"]
                 ]
 
                 for issue in high_severity_issues:
-                    filename = issue.get('filename', 'Unknown')
-                    line_number = issue.get('line_number', 'Unknown')
-                    test_name = issue.get('test_name', 'Unknown')
-                    severity = issue.get('issue_severity', 'Unknown')
+                    filename = issue.get("filename", "Unknown")
+                    line_number = issue.get("line_number", "Unknown")
+                    test_name = issue.get("test_name", "Unknown")
+                    severity = issue.get("issue_severity", "Unknown")
                     logger.warning(
                         f"Security issue in {filename}:{line_number} "
                         f"({test_name}, severity: {severity})"
                     )
 
                 # Consider scan successful if no high-severity issues
-                success = len([
-                    issue for issue in issues
-                    if issue.get('issue_severity', '').lower() == 'high'
-                ]) == 0
+                success = (
+                    len(
+                        [
+                            issue
+                            for issue in issues
+                            if issue.get("issue_severity", "").lower() == "high"
+                        ]
+                    )
+                    == 0
+                )
 
                 return success, scan_data
             else:
@@ -165,7 +194,7 @@ class SecurityTester:
         """Count issues by severity level."""
         severity_counts = {}
         for issue in issues:
-            severity = issue.get('issue_severity', 'Unknown').lower()
+            severity = issue.get("issue_severity", "Unknown").lower()
             severity_counts[severity] = severity_counts.get(severity, 0) + 1
         return severity_counts
 
@@ -173,12 +202,15 @@ class SecurityTester:
         """Count issues by confidence level."""
         confidence_counts = {}
         for issue in issues:
-            confidence = issue.get('issue_confidence', 'Unknown').lower()
+            confidence = issue.get("issue_confidence", "Unknown").lower()
             confidence_counts[confidence] = confidence_counts.get(confidence, 0) + 1
         return confidence_counts
 
-    def generate_summary_report(self, safety_result: Tuple[bool, Optional[Dict]],
-                              bandit_result: Tuple[bool, Optional[Dict]]) -> bool:
+    def generate_summary_report(
+        self,
+        safety_result: Tuple[bool, Optional[Dict]],
+        bandit_result: Tuple[bool, Optional[Dict]],
+    ) -> bool:
         """
         Generate a summary security report.
 
@@ -201,19 +233,26 @@ class SecurityTester:
             "overall_status": "PASS" if (safety_success and bandit_success) else "FAIL",
             "safety_check": {
                 "status": "PASS" if safety_success else "FAIL",
-                "vulnerabilities_found": len(safety_data) if safety_data else 0
+                "vulnerabilities_found": len(safety_data) if safety_data else 0,
             },
             "bandit_scan": {
                 "status": "PASS" if bandit_success else "FAIL",
-                "total_issues": len(bandit_data.get('results', [])) if bandit_data else 0,
-                "high_severity_issues": len([
-                    issue for issue in bandit_data.get('results', [])
-                    if issue.get('issue_severity', '').lower() == 'high'
-                ]) if bandit_data else 0
-            }
+                "total_issues": len(bandit_data.get("results", []))
+                if bandit_data
+                else 0,
+                "high_severity_issues": len(
+                    [
+                        issue
+                        for issue in bandit_data.get("results", [])
+                        if issue.get("issue_severity", "").lower() == "high"
+                    ]
+                )
+                if bandit_data
+                else 0,
+            },
         }
 
-        with open(summary_report, 'w') as f:
+        with open(summary_report, "w") as f:
             json.dump(summary, f, indent=2)
 
         logger.info(f"Security summary saved to: {summary_report}")
@@ -261,39 +300,37 @@ class SecurityTester:
 
 def main():
     """Main entry point for security testing."""
-    parser = argparse.ArgumentParser(description="Run security tests for Meshroom WebApp")
-    parser.add_argument(
-        "--project-root",
-        type=Path,
-        help="Path to project root directory"
+    parser = argparse.ArgumentParser(
+        description="Run security tests for Meshroom WebApp"
     )
     parser.add_argument(
-        "--output-dir",
-        type=Path,
-        help="Directory to save security reports"
+        "--project-root", type=Path, help="Path to project root directory"
+    )
+    parser.add_argument(
+        "--output-dir", type=Path, help="Directory to save security reports"
     )
     parser.add_argument(
         "--verbose",
         type=str,
         default="INFO",
         choices=["DEBUG", "INFO", "WARNING", "ERROR"],
-        help="Set the verbosity level"
+        help="Set the verbosity level",
     )
 
     args = parser.parse_args()
 
     # Setup logging
     level_map = {
-        'DEBUG': logging.DEBUG,
-        'INFO': logging.INFO,
-        'WARNING': logging.WARNING,
-        'ERROR': logging.ERROR
+        "DEBUG": logging.DEBUG,
+        "INFO": logging.INFO,
+        "WARNING": logging.WARNING,
+        "ERROR": logging.ERROR,
     }
 
     logging.basicConfig(
         level=level_map[args.verbose],
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        force=True
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        force=True,
     )
 
     # Determine project root

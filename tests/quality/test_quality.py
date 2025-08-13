@@ -111,16 +111,12 @@ class QualityTester:
         logger.info("Running mypy type checking...")
 
         try:
+            # MyPy will automatically use mypy.ini configuration file
             mypy_args = [
                 sys.executable,
                 "-m",
                 "mypy",
                 "src/",
-                "--ignore-missing-imports",
-                "--strict-optional",
-                "--warn-redundant-casts",
-                "--warn-unused-ignores",
-                "--show-error-codes",
             ]
 
             # Save output to file

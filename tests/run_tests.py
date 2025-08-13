@@ -2,15 +2,17 @@
 """
 Test runner for the Meshroom WebApp project.
 
-This script provides a unified interface for running all tests,
-including unit tests, integration tests, and end-to-end workflows.
+This script provides a unified interface for running different types of tests:
+- Integration tests (backend and client communication)
+- Code quality tests (linting, formatting, type checking)
+- Security tests (vulnerability scanning, static analysis)
 
 Usage:
     python tests/run_tests.py                    # Run all tests
-    python tests/run_tests.py --quick            # Run quick tests only
     python tests/run_tests.py --integration      # Run integration tests only
-    python tests/run_tests.py --backend-only     # Test backend only
-    python tests/run_tests.py --client-only      # Test client only
+    python tests/run_tests.py --quality          # Run code quality tests only
+    python tests/run_tests.py --security         # Run security tests only
+    python tests/run_tests.py --quick            # Run quick integration tests
 """
 
 import argparse
@@ -29,7 +31,6 @@ def setup_logging(verbose_level: str):
     Args:
         verbose_level: Logging level (DEBUG, INFO, WARNING, ERROR)
     """
-    # Map verbose level strings to logging constants
     level_map = {
         'DEBUG': logging.DEBUG,
         'INFO': logging.INFO,
@@ -39,11 +40,10 @@ def setup_logging(verbose_level: str):
 
     level = level_map.get(verbose_level.upper(), logging.INFO)
 
-    # Configure logging
     logging.basicConfig(
         level=level,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        force=True  # Force reconfiguration if already configured
+        force=True
     )
 
 
@@ -69,6 +69,8 @@ class TestRunner:
         self.backend_manager = self.tests_dir / "scripts" / "backend_manager.py"
         self.backend_tests = self.tests_dir / "integration" / "test_backend.py"
         self.client_tests = self.tests_dir / "integration" / "test_client.py"
+        self.quality_tests = self.tests_dir / "quality" / "test_quality.py"
+        self.security_tests = self.tests_dir / "security" / "test_security.py"
 
     def run_command(self, cmd: List[str], description: str) -> Tuple[bool, str]:
         """
@@ -81,6 +83,7 @@ class TestRunner:
         Returns:
             Tuple of (success, output)
         """
+        logger.debug(f"Running command: {' '.join(cmd)}")
         logger.info(f"Running {description}...")
 
         try:
@@ -94,11 +97,14 @@ class TestRunner:
 
             if result.returncode == 0:
                 logger.info(f"{description} passed")
+                logger.debug(f"Command output: {result.stdout}")
                 return True, result.stdout
             else:
                 logger.error(f"{description} failed")
                 if result.stderr:
                     logger.error(f"Error output: {result.stderr}")
+                if result.stdout:
+                    logger.debug(f"Standard output: {result.stdout}")
                 return False, result.stderr
 
         except subprocess.TimeoutExpired:
@@ -110,42 +116,68 @@ class TestRunner:
 
     def ensure_backend_stopped(self):
         """Ensure the backend is stopped before tests."""
-        logger.info("Ensuring backend is stopped...")
+        logger.debug("Ensuring backend is stopped...")
         subprocess.run([
             sys.executable, str(self.backend_manager), "stop"
         ], cwd=self.project_root, capture_output=True)
 
-    def run_lint_checks(self) -> bool:
-        """Run code linting checks."""
+    def check_test_dependencies(self) -> bool:
+        """
+        Check if test dependencies are installed.
+
+        Returns:
+            True if dependencies are available, False otherwise
+        """
+        logger.info("Checking test dependencies...")
+
+        # Check if requirements-test.txt exists
+        test_requirements = self.project_root / "requirements-test.txt"
+        if not test_requirements.exists():
+            logger.error("requirements-test.txt not found. Please install test dependencies.")
+            return False
+
+        # Try to import key testing modules
+        required_modules = ["flake8", "mypy", "bandit", "safety"]
+        missing_modules = []
+
+        for module in required_modules:
+            try:
+                result = subprocess.run([
+                    sys.executable, "-c", f"import {module}"
+                ], capture_output=True)
+                if result.returncode != 0:
+                    missing_modules.append(module)
+            except Exception:
+                missing_modules.append(module)
+
+        if missing_modules:
+            logger.error(f"Missing test dependencies: {', '.join(missing_modules)}")
+            logger.error("Please install test dependencies with:")
+            logger.error("pip install -r requirements-test.txt")
+            return False
+
+        logger.info("All test dependencies are available")
+        return True
+
+    def run_integration_tests(self, quick: bool = False) -> bool:
+        """
+        Run integration tests for backend and client communication.
+
+        Args:
+            quick: Run quick tests only
+
+        Returns:
+            True if all integration tests pass
+        """
+        test_type = "QUICK INTEGRATION" if quick else "FULL INTEGRATION"
         logger.info("=" * 60)
-        logger.info("RUNNING LINTING CHECKS")
-        logger.info("=" * 60)
-
-        # Install flake8 if needed
-        subprocess.run([
-            sys.executable, "-m", "pip", "install", "flake8"
-        ], cwd=self.project_root, capture_output=True)
-
-        # Build flake8 command
-        flake8_cmd = [
-            sys.executable, "-m", "flake8", ".",
-            "--count", "--select=E9,F63,F7,F82",
-            "--show-source", "--statistics", "--exclude", ".venv,venv"
-        ]
-        logger.debug(f"Flake8 command: {' '.join(flake8_cmd)}")
-        success, _ = self.run_command(flake8_cmd, "Flake8 syntax check")
-
-        return success
-
-    def run_backend_startup_test(self) -> bool:
-        """Test backend startup and shutdown."""
-        logger.info("=" * 60)
-        logger.info("TESTING BACKEND STARTUP")
+        logger.info(f"RUNNING {test_type} TESTS")
         logger.info("=" * 60)
 
         self.ensure_backend_stopped()
+        results = []
 
-        # Test startup
+        # Backend startup test
         success, _ = self.run_command([
             sys.executable, str(self.backend_manager), "start"
         ], "Backend startup")
@@ -153,126 +185,122 @@ class TestRunner:
         if not success:
             return False
 
-        # Test status
-        success, _ = self.run_command([
-            sys.executable, str(self.backend_manager), "status"
-        ], "Backend status check")
-
-        # Always try to stop
-        self.run_command([
-            sys.executable, str(self.backend_manager), "stop"
-        ], "Backend shutdown")
-
-        return success
-
-    def run_backend_integration_tests(self) -> bool:
-        """Run backend integration tests."""
-        logger.info("=" * 60)
-        logger.info("RUNNING BACKEND INTEGRATION TESTS")
-        logger.info("=" * 60)
-
-        self.ensure_backend_stopped()
-
-        # Start backend
-        success, _ = self.run_command([
-            sys.executable, str(self.backend_manager), "start"
-        ], "Starting backend for integration tests")
-
-        if not success:
-            return False
-
         try:
-            # Run backend tests
+            # Backend integration tests
             success, _ = self.run_command([
                 sys.executable, str(self.backend_tests),
                 "--wait-for-backend", "--max-wait", "30"
             ], "Backend integration tests")
+            results.append(("Backend Integration", success))
 
-            return success
-
-        finally:
-            # Always stop backend
-            self.run_command([
-                sys.executable, str(self.backend_manager), "stop"
-            ], "Stopping backend after integration tests")
-
-    def run_client_integration_tests(self, quick: bool = False) -> bool:
-        """Run client integration tests."""
-        test_type = "QUICK CLIENT" if quick else "FULL CLIENT"
-        logger.info("=" * 60)
-        logger.info(f"RUNNING {test_type} INTEGRATION TESTS")
-        logger.info("=" * 60)
-
-        self.ensure_backend_stopped()
-
-        # Start backend
-        success, _ = self.run_command([
-            sys.executable, str(self.backend_manager), "start"
-        ], "Starting backend for client tests")
-
-        if not success:
-            return False
-
-        try:
-            # Run client tests
+            # Client integration tests
             cmd = [sys.executable, str(self.client_tests)]
             if quick:
                 cmd.append("--quick")
 
-            success, _ = self.run_command(cmd, f"{test_type.lower()} integration tests")
-
-            return success
+            success, _ = self.run_command(cmd, "Client integration tests")
+            results.append(("Client Integration", success))
 
         finally:
             # Always stop backend
             self.run_command([
                 sys.executable, str(self.backend_manager), "stop"
-            ], "Stopping backend after client tests")
+            ], "Backend shutdown")
 
-    def run_all_tests(self, quick: bool = False, skip_lint: bool = False) -> bool:
+        # Summary
+        passed = sum(1 for _, success in results if success)
+        total = len(results)
+
+        logger.info("=" * 60)
+        logger.info("INTEGRATION TEST RESULTS")
+        logger.info("=" * 60)
+
+        for test_name, success in results:
+            status = "PASS" if success else "FAIL"
+            logger.info(f"{test_name:.<40} {status}")
+
+        logger.info(f"Overall: {passed}/{total} integration tests passed")
+
+        return passed == total
+
+    def run_quality_tests(self, fix_issues: bool = False) -> bool:
         """
-        Run the complete test suite.
+        Run code quality tests.
 
         Args:
-            quick: Run quick tests only
-            skip_lint: Skip linting checks
+            fix_issues: Whether to automatically fix issues
+
+        Returns:
+            True if quality tests pass
+        """
+        logger.info("=" * 60)
+        logger.info("RUNNING CODE QUALITY TESTS")
+        logger.info("=" * 60)
+
+        cmd = [sys.executable, str(self.quality_tests)]
+        if fix_issues:
+            cmd.append("--fix")
+
+        success, _ = self.run_command(cmd, "Code quality tests")
+        return success
+
+    def run_security_tests(self) -> bool:
+        """
+        Run security tests.
+
+        Returns:
+            True if security tests pass
+        """
+        logger.info("=" * 60)
+        logger.info("RUNNING SECURITY TESTS")
+        logger.info("=" * 60)
+
+        success, _ = self.run_command([
+            sys.executable, str(self.security_tests)
+        ], "Security tests")
+        return success
+
+    def run_all_tests(self, quick: bool = False, fix_issues: bool = False) -> bool:
+        """
+        Run all test suites.
+
+        Args:
+            quick: Run quick integration tests only
+            fix_issues: Automatically fix code quality issues
 
         Returns:
             True if all tests pass, False otherwise
         """
         logger.info("=" * 60)
-        logger.info("MESHROOM WEBAPP TEST SUITE")
+        logger.info("MESHROOM WEBAPP COMPLETE TEST SUITE")
         logger.info("=" * 60)
-        logger.info(f"Test mode: {'Quick' if quick else 'Full'}")
+        logger.info(f"Integration test mode: {'Quick' if quick else 'Full'}")
+        logger.info(f"Fix quality issues: {fix_issues}")
         logger.info(f"Project root: {self.project_root}")
         logger.info("=" * 60)
 
+        # Check dependencies first
+        if not self.check_test_dependencies():
+            return False
+
         results = []
 
-        # Linting checks
-        if not skip_lint:
-            results.append(("Linting", self.run_lint_checks()))
+        # Run all test suites
+        results.append(("Integration Tests", self.run_integration_tests(quick=quick)))
+        results.append(("Code Quality Tests", self.run_quality_tests(fix_issues=fix_issues)))
+        results.append(("Security Tests", self.run_security_tests()))
 
-        # Backend startup test
-        results.append(("Backend Startup", self.run_backend_startup_test()))
-
-        # Backend integration tests
-        results.append(("Backend Integration", self.run_backend_integration_tests()))
-
-        # Client integration tests
-        results.append(("Client Integration", self.run_client_integration_tests(quick=quick)))
-
-        # Summary
+        # Final summary
         logger.info("=" * 60)
-        logger.info("TEST RESULTS SUMMARY")
+        logger.info("COMPLETE TEST SUITE RESULTS")
         logger.info("=" * 60)
 
         passed = 0
         total = len(results)
 
-        for test_name, success in results:
-            status = "PASSED" if success else "FAILED"
-            logger.info(f"{test_name:.<50} {status}")
+        for test_suite, success in results:
+            status = "PASS" if success else "FAIL"
+            logger.info(f"{test_suite:.<40} {status}")
             if success:
                 passed += 1
 
@@ -280,41 +308,48 @@ class TestRunner:
         logger.info(f"OVERALL: {passed}/{total} test suites passed")
 
         if passed == total:
-            logger.info("ALL TESTS PASSED!")
+            logger.info("ALL TEST SUITES PASSED!")
             return True
         else:
-            logger.error("SOME TESTS FAILED!")
+            logger.error("SOME TEST SUITES FAILED!")
             return False
 
 
 def main():
     """Main entry point for the test runner."""
     parser = argparse.ArgumentParser(description="Run Meshroom WebApp tests")
-    parser.add_argument(
-        "--quick",
-        action="store_true",
-        help="Run quick tests only (faster execution)"
-    )
-    parser.add_argument(
+
+    # Test type selection (mutually exclusive group)
+    test_group = parser.add_mutually_exclusive_group()
+    test_group.add_argument(
         "--integration",
         action="store_true",
         help="Run integration tests only"
     )
-    parser.add_argument(
-        "--backend-only",
+    test_group.add_argument(
+        "--quality",
         action="store_true",
-        help="Run backend tests only"
+        help="Run code quality tests only"
+    )
+    test_group.add_argument(
+        "--security",
+        action="store_true",
+        help="Run security tests only"
+    )
+
+    # Test modifiers
+    parser.add_argument(
+        "--quick",
+        action="store_true",
+        help="Run quick integration tests (faster execution)"
     )
     parser.add_argument(
-        "--client-only",
+        "--fix",
         action="store_true",
-        help="Run client tests only"
+        help="Automatically fix code quality issues when possible"
     )
-    parser.add_argument(
-        "--skip-lint",
-        action="store_true",
-        help="Skip linting checks"
-    )
+
+    # General options
     parser.add_argument(
         "--project-root",
         type=Path,
@@ -324,7 +359,8 @@ def main():
         "--verbose",
         type=str,
         default="INFO",
-        help="Set the verbosity level (DEBUG, INFO, WARNING, ERROR)"
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        help="Set the verbosity level"
     )
 
     args = parser.parse_args()
@@ -335,20 +371,15 @@ def main():
     runner = TestRunner(args.project_root)
 
     try:
-        if args.backend_only:
-            success = (
-                runner.run_backend_startup_test() and
-                runner.run_backend_integration_tests()
-            )
-        elif args.client_only:
-            success = runner.run_client_integration_tests(quick=args.quick)
-        elif args.integration:
-            success = (
-                runner.run_backend_integration_tests() and
-                runner.run_client_integration_tests(quick=args.quick)
-            )
+        if args.integration:
+            success = runner.run_integration_tests(quick=args.quick)
+        elif args.quality:
+            success = runner.run_quality_tests(fix_issues=args.fix)
+        elif args.security:
+            success = runner.run_security_tests()
         else:
-            success = runner.run_all_tests(quick=args.quick, skip_lint=args.skip_lint)
+            # Run all tests
+            success = runner.run_all_tests(quick=args.quick, fix_issues=args.fix)
 
         sys.exit(0 if success else 1)
 

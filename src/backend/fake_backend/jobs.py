@@ -14,10 +14,14 @@ from typing import Dict, List, Optional, Set
 from fastapi import WebSocket
 
 try:
-    from .models import JobStatus, ProcessingJob, ProgressUpdate, WebSocketConnection
+    from .models import (
+        JobStatus, ProcessingJob, ProgressUpdate, WebSocketConnection
+    )
 except ImportError:
     # Handle direct execution
-    from models import JobStatus, ProcessingJob, ProgressUpdate, WebSocketConnection
+    from models import (
+        JobStatus, ProcessingJob, ProgressUpdate, WebSocketConnection
+    )
 
 
 logger = logging.getLogger(__name__)
@@ -198,35 +202,38 @@ class JobManager:
 
             for stage_name, start_progress, end_progress in stages:
                 # Simulate stage processing
-                # nosec B311: Using random for simulation purposes only, not cryptographic
+                # nosec B311: Using random for simulation purposes only
                 steps = random.randint(3, 8)
                 for step in range(steps + 1):
                     if job.status != JobStatus.PROCESSING:
                         return  # Job was cancelled or failed
 
-                    progress = start_progress + (end_progress - start_progress) * (step / steps)
+                    progress_delta = end_progress - start_progress
+                    progress = start_progress + progress_delta * (step / steps)
                     job.progress = int(progress)
 
                     message = f"{stage_name}... {progress:.1f}%"
                     await self._send_progress_update(job_id, job.progress, message)
 
                     # Random delay to simulate processing time
-                    # nosec B311: Using random for simulation timing only, not cryptographic
+                    # nosec B311: Using random for simulation timing only
                     delay = random.uniform(0.5, 2.0)
                     await asyncio.sleep(delay)
 
-            # Complete the job - update status FIRST before sending the final message
+            # Complete the job - update status FIRST before sending message
             job.status = JobStatus.COMPLETED
             job.completed_at = datetime.now()
             job.progress = 100
-            job.result_file_path = f"output/backend/fake_backend/models/{job_id}_model.glb"
+            result_path = (
+                f"output/backend/fake_backend/models/{job_id}_model.glb"
+            )
+            job.result_file_path = result_path
 
             # Send completion message AFTER the status is updated
-            await self._send_progress_update(
-                job_id,
-                100,
+            completion_msg = (
                 f"Processing completed! Model saved to {job.result_file_path}"
             )
+            await self._send_progress_update(job_id, 100, completion_msg)
 
             logger.info(
                 f"Job {job_id} completed in {job.duration_seconds:.1f} seconds"
@@ -277,9 +284,13 @@ class JobManager:
             websocket = self._connections[connection_id]
             try:
                 await websocket.send_text(update.model_dump_json())
-                logger.debug(f"Sent progress update to {connection_id}: {progress}%")
+                logger.debug(
+                    f"Sent progress update to {connection_id}: {progress}%"
+                )
             except Exception as e:
-                logger.warning(f"Failed to send update to {connection_id}: {e}")
+                logger.warning(
+                    f"Failed to send update to {connection_id}: {e}"
+                )
                 disconnected_connections.append(connection_id)
 
         # Clean up disconnected connections
@@ -307,6 +318,8 @@ class JobManager:
         job.status = JobStatus.FAILED
         job.error_message = "Cancelled by user"
 
-        await self._send_progress_update(job_id, job.progress, "Job cancelled")
+        await self._send_progress_update(
+            job_id, job.progress, "Job cancelled"
+        )
         logger.info(f"Cancelled job {job_id}")
         return True

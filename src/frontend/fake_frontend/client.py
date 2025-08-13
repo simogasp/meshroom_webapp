@@ -43,9 +43,14 @@ class PhotogrammetryClient:
         """
         self.base_url = base_url.rstrip('/')
         self.session = requests.Session()
-        self.websocket_url = self.base_url.replace('http://', 'ws://').replace('https://', 'wss://')
+        ws_url = self.base_url.replace('http://', 'ws://').replace(
+            'https://', 'wss://'
+        )
+        self.websocket_url = ws_url
 
-    def generate_dummy_image(self, filename: str, size_kb: int = 1) -> bytes:
+    def generate_dummy_image(
+        self, filename: str, size_kb: int = 1
+    ) -> bytes:
         """
         Generate dummy image data for testing.
 
@@ -57,14 +62,20 @@ class PhotogrammetryClient:
             Dummy image data as bytes
         """
         # Create the dummy JPEG-like header
-        jpeg_header = b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00H\x00H\x00\x00'
+        jpeg_header = (
+            b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01'
+            b'\x00H\x00H\x00\x00'
+        )
 
         # Generate random data to reach desired size
         target_size = size_kb * 1024
-        remaining_size = max(0, target_size - len(jpeg_header) - 2)  # Account for end marker
+        remaining_size = max(0, target_size - len(jpeg_header) - 2)
+        # Account for end marker
 
-        # nosec B311: Using random for test data generation only, not cryptographic
-        random_data = bytes([random.randint(0, 255) for _ in range(remaining_size)])
+        # nosec B311: Using random for test data generation only
+        random_data = bytes([
+            random.randint(0, 255) for _ in range(remaining_size)
+        ])
 
         # Add JPEG end marker
         jpeg_end = b'\xff\xd9'
@@ -84,7 +95,7 @@ class PhotogrammetryClient:
         images = []
         for i in range(count):
             filename = f"test_image_{i+1:03d}.jpg"
-            # nosec B311: Using random for test data generation only, not cryptographic
+            # nosec B311: Using random for test data generation only
             size_kb = random.randint(1, 10)  # Random size between 1-10 KB
             content = self.generate_dummy_image(filename, size_kb)
 
@@ -131,8 +142,13 @@ class PhotogrammetryClient:
                 'enable_gpu': enable_gpu
             }
 
-            logger.info(f"Uploading {len(images)} images to {self.base_url}/upload")
-            logger.info(f"Parameters: quality={quality}, max_features={max_features}, enable_gpu={enable_gpu}")
+            logger.info(
+                f"Uploading {len(images)} images to {self.base_url}/upload"
+            )
+            logger.info(
+                f"Parameters: quality={quality}, "
+                f"max_features={max_features}, enable_gpu={enable_gpu}"
+            )
 
             # Send upload request
             response = self.session.post(
@@ -176,13 +192,16 @@ class PhotogrammetryClient:
             logger.error(f"Error getting job status: {e}")
             return None
 
-    def download_model(self, job_id: str, output_dir: Optional[str] = None) -> Optional[str]:
+    def download_model(
+        self, job_id: str, output_dir: Optional[str] = None
+    ) -> Optional[str]:
         """
         Download the generated 3D model.
 
         Args:
             job_id: The job identifier
-            output_dir: Directory to save the model (defaults to project output directory)
+            output_dir: Directory to save the model (defaults to project
+                        output directory)
 
         Returns:
             Path to downloaded file or None if failed
@@ -193,9 +212,16 @@ class PhotogrammetryClient:
                 # Get the project root - need to go up 5 levels from this file
                 # client.py -> fake_frontend -> frontend -> src -> project_root
                 current_file = os.path.abspath(__file__)
-                project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(current_file))))
-                output_dir = os.path.join(project_root, "output", "frontend", "fake_frontend", "downloads")
-            
+                project_root = os.path.dirname(
+                    os.path.dirname(
+                        os.path.dirname(os.path.dirname(current_file))
+                    )
+                )
+                output_dir = os.path.join(
+                    project_root, "output", "frontend",
+                    "fake_frontend", "downloads"
+                )
+
             # Create output directory
             os.makedirs(output_dir, exist_ok=True)
 
@@ -206,7 +232,9 @@ class PhotogrammetryClient:
             for attempt in range(max_retries):
                 try:
                     # Download model
-                    response = self.session.get(f"{self.base_url}/jobs/{job_id}/download")
+                    response = self.session.get(
+                        f"{self.base_url}/jobs/{job_id}/download"
+                    )
 
                     if response.status_code == 200:
                         filename = f"{job_id}_model.glb"
@@ -215,24 +243,45 @@ class PhotogrammetryClient:
                         with open(filepath, 'wb') as f:
                             f.write(response.content)
 
-                        logger.info(f"Model downloaded: {filepath} ({len(response.content)} bytes)")
+                        logger.info(
+                            f"Model downloaded: {filepath} "
+                            f"({len(response.content)} bytes)"
+                        )
                         return filepath
-                    elif response.status_code == 400 and "not completed" in response.text:
+                    elif (
+                        response.status_code == 400 and
+                        "not completed" in response.text
+                    ):
                         # Job status race condition - wait and retry
                         if attempt < max_retries - 1:
-                            logger.info(f"Job not yet marked as completed, retrying in {retry_delay}s... (attempt {attempt + 1}/{max_retries})")
+                            msg = (
+                                f"Job not yet marked as completed, "
+                                f"retrying in {retry_delay}s... "
+                                f"(attempt {attempt + 1}/{max_retries})"
+                            )
+                            logger.info(msg)
                             time.sleep(retry_delay)
                             continue
                         else:
-                            logger.error(f"Download failed after {max_retries} attempts: {response.status_code} - {response.text}")
+                            logger.error(
+                                f"Download failed after {max_retries} "
+                                f"attempts: {response.status_code} - "
+                                f"{response.text}"
+                            )
                             return None
                     else:
-                        logger.error(f"Download failed: {response.status_code} - {response.text}")
+                        logger.error(
+                            f"Download failed: {response.status_code} - "
+                            f"{response.text}"
+                        )
                         return None
 
                 except Exception as e:
                     if attempt < max_retries - 1:
-                        logger.warning(f"Download attempt {attempt + 1} failed: {e}, retrying...")
+                        logger.warning(
+                            f"Download attempt {attempt + 1} failed: {e}, "
+                            f"retrying..."
+                        )
                         time.sleep(retry_delay)
                         continue
                     else:
@@ -242,7 +291,9 @@ class PhotogrammetryClient:
             logger.error(f"Download error: {e}")
             return None
 
-    def monitor_progress_websocket(self, job_id: str, timeout: int = 300) -> bool:
+    def monitor_progress_websocket(
+        self, job_id: str, timeout: int = 300
+    ) -> bool:
         """
         Monitor job progress via WebSocket.
 
@@ -376,7 +427,8 @@ class PhotogrammetryClient:
             status = self.get_job_status(job_id)
             if status:
                 logger.info(f"Final status: {status['status']}")
-                logger.info(f"Processing time: {status.get('duration_seconds', 'N/A')} seconds")
+                duration = status.get('duration_seconds', 'N/A')
+                logger.info(f"Processing time: {duration} seconds")
 
             # Step 5: Download model
             logger.info("Step 5: Downloading 3D model...")
@@ -400,26 +452,26 @@ class PhotogrammetryClient:
 def main():
     """Main entry point for the CLI client."""
 
-    print("Fake Photogrammetry Client v0.1.0")
-    print("=" * 50)
+    logger.info("Fake Photogrammetry Client v0.1.0")
+    logger.info("=" * 50)
 
     # Check if backend is running
     client = PhotogrammetryClient()
     try:
         response = requests.get(f"{client.base_url}/health", timeout=5)
         if response.status_code != 200:
-            print(f"Backend health check failed: {response.status_code}")
+            logger.error(f"Backend health check failed: {response.status_code}")
             return
     except Exception as e:
-        print(f"Cannot connect to backend at {client.base_url}")
-        print(f"Error: {e}")
-        print("\nPlease ensure the backend server is running:")
-        print("  cd src/backend/fake_backend")
-        print("  python main.py")
+        logger.error(f"Cannot connect to backend at {client.base_url}")
+        logger.error(f"Error: {e}")
+        logger.info("\nPlease ensure the backend server is running:")
+        logger.info("  cd src/backend/fake_backend")
+        logger.info("  python main.py")
         return
 
-    print("Backend is running and healthy!")
-    print()
+    logger.info("Backend is running and healthy!")
+    logger.info("")
 
     # Run test workflow
     success = client.run_test_workflow(
@@ -429,9 +481,9 @@ def main():
     )
 
     if success:
-        print("\n✅ All tests passed!")
+        logger.info("\n✅ All tests passed!")
     else:
-        print("\n❌ Some tests failed!")
+        logger.error("\n❌ Some tests failed!")
 
 
 if __name__ == "__main__":

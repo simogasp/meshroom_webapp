@@ -15,19 +15,29 @@ from typing import List
 
 # Add the parent directory to the path for imports when running directly
 if __name__ == "__main__":
-    sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+    sys.path.append(
+        os.path.dirname(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        )
+    )
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
+from fastapi import (
+    FastAPI, File, Form, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
+)
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
 try:
     from .jobs import JobManager, generate_dummy_model
-    from .models import ImageData, JobResponse, ProcessingJob, UploadRequest
+    from .models import (
+        ImageData, JobResponse, ProcessingJob, UploadRequest
+    )
 except ImportError:
     # Handle direct execution
     from jobs import JobManager, generate_dummy_model
-    from models import ImageData, JobResponse, ProcessingJob, UploadRequest
+    from models import (
+        ImageData, JobResponse, ProcessingJob, UploadRequest
+    )
 
 
 # Configure logging
@@ -58,9 +68,15 @@ job_manager = JobManager()
 
 # Create directories for file storage in output folder
 # Get the absolute path to the project root (3 levels up from this file)
-project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-uploads_dir = os.path.join(project_root, "output", "backend", "fake_backend", "uploads")
-models_dir = os.path.join(project_root, "output", "backend", "fake_backend", "models")
+project_root = os.path.dirname(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
+uploads_dir = os.path.join(
+    project_root, "output", "backend", "fake_backend", "uploads"
+)
+models_dir = os.path.join(
+    project_root, "output", "backend", "fake_backend", "models"
+)
 
 os.makedirs(uploads_dir, exist_ok=True)
 os.makedirs(models_dir, exist_ok=True)
@@ -185,7 +201,9 @@ async def upload_images(
             )
             images.append(image_data)
 
-            logger.info(f"Uploaded {file.filename}: {file_size} bytes -> {upload_path}")
+            logger.info(
+                f"Uploaded {file.filename}: {file_size} bytes -> {upload_path}"
+            )
 
         # Check total upload size
         if total_size > 500 * 1024 * 1024:  # 500MB total
@@ -195,7 +213,9 @@ async def upload_images(
             )
 
         if not images:
-            raise HTTPException(status_code=400, detail="No valid images provided")
+            raise HTTPException(
+                status_code=400, detail="No valid images provided"
+            )
 
         # Create the processing job
         job = ProcessingJob(
@@ -228,7 +248,9 @@ async def upload_images(
         raise
     except Exception as e:
         logger.error(f"Upload failed: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(
+            status_code=500, detail="Internal server error"
+        )
 
 
 @app.get("/jobs/{job_id}")
@@ -255,7 +277,9 @@ async def get_job_status(job_id: str):
         "progress": job.progress,
         "created_at": job.created_at.isoformat(),
         "started_at": job.started_at.isoformat() if job.started_at else None,
-        "completed_at": job.completed_at.isoformat() if job.completed_at else None,
+        "completed_at": (
+            job.completed_at.isoformat() if job.completed_at else None
+        ),
         "total_images": job.total_images,
         "total_size_mb": round(job.total_size_mb, 2),
         "duration_seconds": job.duration_seconds,
@@ -296,7 +320,10 @@ async def download_model(job_id: str):
     with open(model_path, "wb") as f:
         f.write(model_data)
 
-    logger.info(f"Generated dummy model for job {job_id}: {len(model_data)} bytes -> {model_path}")
+    logger.info(
+        f"Generated dummy model for job {job_id}: {len(model_data)} bytes -> "
+        f"{model_path}"
+    )
 
     return FileResponse(
         path=model_path,
@@ -372,16 +399,24 @@ async def websocket_endpoint(websocket: WebSocket, job_id: str):
             return
 
         # Register WebSocket connection
-        connection_id = await job_manager.register_websocket(websocket, job_id)
-        logger.info(f"WebSocket connected for job {job_id}: {connection_id}")
+        connection_id = await job_manager.register_websocket(
+            websocket, job_id
+        )
+        logger.info(
+            f"WebSocket connected for job {job_id}: {connection_id}"
+        )
 
         # Send initial status
-        await websocket.send_text(f'{{"job_id": "{job_id}", "progress": {job.progress}, "message": "Connected to job {job_id}"}}')
+        initial_msg = (
+            f'{{"job_id": "{job_id}", "progress": {job.progress}, '
+            f'"message": "Connected to job {job_id}"}}'
+        )
+        await websocket.send_text(initial_msg)
 
         # Keep connection alive and handle messages
         while True:
             try:
-                # Wait for messages (the client can send heartbeat or disconnect)
+                # Wait for messages (client can send heartbeat or disconnect)
                 message = await websocket.receive_text()
                 logger.debug(f"Received WebSocket message: {message}")
 
@@ -392,7 +427,9 @@ async def websocket_endpoint(websocket: WebSocket, job_id: str):
             except WebSocketDisconnect:
                 break
             except Exception as e:
-                logger.warning(f"WebSocket error for {connection_id}: {e}")
+                logger.warning(
+                    f"WebSocket error for {connection_id}: {e}"
+                )
                 break
 
     except Exception as e:

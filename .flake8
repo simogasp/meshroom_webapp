@@ -1,0 +1,31 @@
+[flake8]
+max-line-length = 88
+extend-ignore = 
+    E203,
+    W503,
+    E501
+    
+exclude = 
+    __pycache__,
+    .git,
+    .tox,
+    .eggs,
+    .venv,
+    build,
+    dist,
+    downloads,
+    models,
+    uploads,
+    reports,
+    *.egg-info,
+    .pytest_cache
+
+per-file-ignores =
+    tests/*: E501, F401, F811
+    **/conftest.py: F401
+    **/settings.py: F401
+    src/*/fake_*/*: F401
+
+count = true
+statistics = true
+show-source = true

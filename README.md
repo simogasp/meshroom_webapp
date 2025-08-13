@@ -2,6 +2,29 @@
 
 A cross-platform photogrammetry application that generates 3D models from images using the Meshroom backend. This project is developed incrementally, starting with a fake backend and frontend for testing the communication workflow.
 
+## 🚀 CI/CD Pipeline
+
+This project includes a comprehensive continuous integration and deployment pipeline with:
+
+- **Automated Testing**: Integration, quality, and security tests
+- **Code Quality**: Linting (flake8), formatting (black), type checking (mypy)
+- **Security Scanning**: Dependency vulnerabilities (safety) and static analysis (bandit)
+- **Cross-Platform**: Tests on Python 3.10-3.13
+
+See [PIPELINE_GUIDE.md](PIPELINE_GUIDE.md) for detailed documentation.
+
+### Quick Pipeline Usage
+```bash
+# Run all tests
+python tests/run_tests.py
+
+# Run with auto-fix for formatting issues
+python tests/run_tests.py --quality --fix
+
+# Run quick integration tests
+python tests/run_tests.py --integration --quick
+```
+
 ## Project Overview
 
 This application allows users to:

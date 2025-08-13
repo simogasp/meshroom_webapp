@@ -1,0 +1,24 @@
+# Bandit configuration file for Meshroom WebApp
+# This configuration focuses on high and medium severity issues  
+# while allowing some flexibility for demo/test code
+
+exclude_dirs: ["tests", "build", "dist", "downloads", "models", "uploads", "reports", ".venv", "venv"]
+
+# Skip certain checks that are not relevant for demo/development code
+skips: ["B311", "B324"]
+
+# Tests to run (empty means all except skipped)
+tests: []
+
+# Additional configuration for specific checks
+assert_used:
+  skips: ["*_test.py", "*/tests/*"]
+
+hardcoded_password_string:
+  word_list: ["example", "sample", "demo", "test", "fake", "placeholder"]
+
+hardcoded_password_funcarg:
+  word_list: ["example", "sample", "demo", "test", "fake", "placeholder"]
+
+hardcoded_password_default:
+  word_list: ["example", "sample", "demo", "test", "fake", "placeholder"]

@@ -191,3 +191,7 @@ yarn-error.log*
 # Rust (for Pydantic compilation artifacts)
 target/
 Cargo.lock
+
+# CI/CD Reports and artifacts
+reports/
+*.report

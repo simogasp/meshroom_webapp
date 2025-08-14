@@ -96,17 +96,33 @@ The project follows an incremental development strategy:
 
 2. **Run the frontend client (in a new terminal):**
 
+    **Option A: CLI Client**
+
     ```bash
     cd src/frontend/fake_frontend
     python client.py
     ```
 
-    The client will automatically:
+    **Option B: Web API Tester (Recommended for interactive testing)**
+
+    ```bash
+    # Open the web-based testing interface
+    open src/frontend/web_api_tester/web_test.html
+    ```
+
+    The CLI client will automatically:
 
     - Generate test images
     - Upload them to the backend
     - Monitor processing progress via WebSocket
     - Download the generated 3D model
+
+    The web tester provides:
+
+    - Point-and-click interface for all API endpoints
+    - Real-time progress monitoring with visual feedback
+    - Interactive file upload and download
+    - Live response logging and error handling
 
 ## Architecture
 
@@ -121,8 +137,11 @@ meshroom_webapp/
 │   │       ├── models.py          # Pydantic models and data structures
 │   │       └── jobs.py            # Job management and WebSocket handling
 │   └── frontend/
-│       └── fake_frontend/         # CLI test client
-│           └── client.py          # Complete workflow testing client
+│       ├── fake_frontend/         # CLI test client
+│       │   └── client.py          # Complete workflow testing client
+│       └── web_api_tester/        # Web-based API testing interface
+│           ├── web_test.html      # Interactive HTML testing tool
+│           └── README.md          # Detailed usage documentation
 ├── tests/                         # Test suite
 │   ├── integration/               # End-to-end workflow tests
 │   ├── quality/                   # Code quality and linting tests
@@ -169,6 +188,14 @@ meshroom_webapp/
 - WebSocket-based progress monitoring with threading
 - Model download with retry logic and error handling
 
+**Web API Tester** (`src/frontend/web_api_tester/web_test.html`)
+
+- Interactive HTML-based testing interface for all API endpoints
+- Real-time WebSocket progress monitoring with visual feedback
+- Point-and-click testing without requiring command-line knowledge
+- Automatic file handling and response logging
+- See [detailed documentation](src/frontend/web_api_tester/README.md) for full usage guide
+
 ### Development Infrastructure
 
 **Testing Framework** (`tests/`)
@@ -213,6 +240,9 @@ meshroom_webapp/
 - ✅ Real-time progress monitoring via WebSocket
 - ✅ Dummy 3D model generation and download
 - ✅ Comprehensive logging and error handling
+- ✅ Production-grade code with type hints and documentation
+- ✅ **Web API Tester**: Interactive HTML interface for visual API testing
+- ✅ **CLI Client**: Command-line interface for automated workflow testing
 - ✅ Production-grade code with type hints and documentation
 
 ### Planned Features

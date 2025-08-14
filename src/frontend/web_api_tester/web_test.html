@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meshroom WebApp API Tester</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            height: 100vh;
+        }
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .results {
+            background: #1e1e1e;
+            color: #f0f0f0;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            font-family: 'Courier New', monospace;
+            overflow-y: auto;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #666;
+            margin-top: 30px;
+        }
+        .endpoint-group {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #fafafa;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        label {
+            font-weight: bold;
+            color: #555;
+        }
+        .file-input {
+            margin: 10px 0;
+        }
+        .websocket-status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .ws-disconnected {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        .ws-connected {
+            background-color: #e8f5e8;
+            color: #2e7d32;
+        }
+        .response {
+            margin: 10px 0;
+            padding: 10px;
+            border-left: 4px solid #4CAF50;
+            background-color: #2a2a2a;
+        }
+        .response.error {
+            border-left-color: #f44336;
+        }
+        .timestamp {
+            color: #888;
+            font-size: 12px;
+        }
+        .clear-btn {
+            background-color: #ff9800;
+            float: right;
+        }
+        .config-section {
+            background-color: #e3f2fd;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="controls">
+            <h1>🚀 Meshroom WebApp API Tester</h1>
+            
+            <!-- Configuration -->
+            <div class="config-section">
+                <h2>⚙️ Configuration</h2>
+                <label for="baseUrl">Backend URL:</label>
+                <input type="text" id="baseUrl" value="http://localhost:8000" placeholder="http://localhost:8000">
+                <button onclick="testConnection()">Test Connection</button>
+            </div>
+
+            <!-- Server Info -->
+            <div class="endpoint-group">
+                <h2>📊 Server Information</h2>
+                <button onclick="getServerStatus()">GET / (Server Status)</button>
+                <button onclick="getHealth()">GET /health (Health Check)</button>
+                <button onclick="listJobs()">GET /jobs (List All Jobs)</button>
+            </div>
+
+            <!-- File Upload -->
+            <div class="endpoint-group">
+                <h2>📤 File Upload</h2>
+                <label for="fileInput">Select Images:</label>
+                <input type="file" id="fileInput" accept="image/*" multiple class="file-input">
+                
+                <label for="quality">Quality:</label>
+                <select id="quality">
+                    <option value="low">Low</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="high">High</option>
+                </select>
+                
+                <label for="maxFeatures">Max Features:</label>
+                <input type="number" id="maxFeatures" value="1000" min="100" max="10000">
+                
+                <label>
+                    <input type="checkbox" id="enableGpu"> Enable GPU
+                </label>
+                
+                <button onclick="uploadImages()">POST /upload (Upload Images)</button>
+                <button onclick="generateDummyUpload()">Upload Dummy Images</button>
+            </div>
+
+            <!-- Job Management -->
+            <div class="endpoint-group">
+                <h2>🔧 Job Management</h2>
+                <label for="jobId">Job ID:</label>
+                <input type="text" id="jobId" placeholder="Enter job ID from upload response">
+                
+                <button onclick="getJobStatus()">GET /jobs/{id} (Job Status)</button>
+                <button onclick="downloadModel()">GET /jobs/{id}/download (Download Model)</button>
+                <button onclick="cancelJob()">DELETE /jobs/{id} (Cancel Job)</button>
+            </div>
+
+            <!-- WebSocket -->
+            <div class="endpoint-group">
+                <h2>🔄 Real-time Progress</h2>
+                <div id="wsStatus" class="websocket-status ws-disconnected">WebSocket: Disconnected</div>
+                <button onclick="connectWebSocket()" id="wsConnectBtn">Connect to WebSocket</button>
+                <button onclick="disconnectWebSocket()" id="wsDisconnectBtn" disabled>Disconnect</button>
+                <button onclick="sendPing()" id="wsPingBtn" disabled>Send Ping</button>
+            </div>
+        </div>
+
+        <div class="results">
+            <h2>📋 API Response Log 
+                <button class="clear-btn" onclick="clearResults()">Clear</button>
+            </h2>
+            <div id="resultsContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        let websocket = null;
+        let currentJobId = null;
+
+        function getTimestamp() {
+            return new Date().toLocaleTimeString();
+        }
+
+        function addResult(title, data, isError = false) {
+            const container = document.getElementById('resultsContainer');
+            const div = document.createElement('div');
+            div.className = 'response' + (isError ? ' error' : '');
+            
+            let content = `<div class="timestamp">[${getTimestamp()}] ${title}</div>`;
+            if (typeof data === 'string') {
+                content += `<pre>${data}</pre>`;
+            } else {
+                content += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+            }
+            
+            div.innerHTML = content;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function clearResults() {
+            document.getElementById('resultsContainer').innerHTML = '';
+        }
+
+        function getBaseUrl() {
+            return document.getElementById('baseUrl').value;
+        }
+
+        async function apiRequest(endpoint, options = {}) {
+            const url = `${getBaseUrl()}${endpoint}`;
+            try {
+                addResult(`→ ${options.method || 'GET'} ${endpoint}`, 'Sending request...');
+                const response = await fetch(url, options);
+                const contentType = response.headers.get('content-type');
+                
+                let responseData;
+                if (contentType && contentType.includes('application/json')) {
+                    responseData = await response.json();
+                } else if (contentType && contentType.includes('application/octet-stream')) {
+                    const blob = await response.blob();
+                    responseData = `Binary file received: ${blob.size} bytes (${blob.type})`;
+                    
+                    // For model downloads, create a download link
+                    if (endpoint.includes('/download')) {
+                        const downloadUrl = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = downloadUrl;
+                        a.download = `model_${currentJobId || 'unknown'}.glb`;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(downloadUrl);
+                        responseData += ' (Download started)';
+                    }
+                } else {
+                    responseData = await response.text();
+                }
+
+                addResult(`✅ ${response.status} ${response.statusText}`, responseData, !response.ok);
+                return responseData;
+            } catch (error) {
+                addResult(`❌ Request Failed`, error.message, true);
+                throw error;
+            }
+        }
+
+        // Server Information APIs
+        async function testConnection() {
+            try {
+                await apiRequest('/');
+                addResult('🔗 Connection Test', 'Backend is reachable!');
+            } catch (error) {
+                addResult('🔗 Connection Test', 'Backend is not reachable!', true);
+            }
+        }
+
+        async function getServerStatus() {
+            await apiRequest('/');
+        }
+
+        async function getHealth() {
+            await apiRequest('/health');
+        }
+
+        async function listJobs() {
+            await apiRequest('/jobs');
+        }
+
+        // File Upload
+        async function uploadImages() {
+            const fileInput = document.getElementById('fileInput');
+            const files = fileInput.files;
+            
+            if (files.length === 0) {
+                addResult('❌ Upload Error', 'No files selected', true);
+                return;
+            }
+
+            const formData = new FormData();
+            for (let file of files) {
+                formData.append('files', file);
+            }
+            
+            formData.append('quality', document.getElementById('quality').value);
+            formData.append('max_features', document.getElementById('maxFeatures').value);
+            formData.append('enable_gpu', document.getElementById('enableGpu').checked);
+
+            try {
+                const result = await apiRequest('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                // Auto-populate job ID if upload successful
+                if (result && result.job_id) {
+                    document.getElementById('jobId').value = result.job_id;
+                    currentJobId = result.job_id;
+                    addResult('✨ Auto-filled', `Job ID: ${result.job_id}`);
+                }
+            } catch (error) {
+                // Error already logged in apiRequest
+            }
+        }
+
+        function generateDummyFile(filename, sizeKB = 1) {
+            const data = new Uint8Array(sizeKB * 1024);
+            // Fill with some dummy image-like data
+            for (let i = 0; i < data.length; i++) {
+                data[i] = Math.floor(Math.random() * 256);
+            }
+            return new File([data], filename, { type: 'image/jpeg' });
+        }
+
+        async function generateDummyUpload() {
+            const formData = new FormData();
+            
+            // Generate 3 dummy files
+            for (let i = 1; i <= 3; i++) {
+                const file = generateDummyFile(`dummy_image_${i}.jpg`, 2);
+                formData.append('files', file);
+            }
+            
+            formData.append('quality', 'medium');
+            formData.append('max_features', '1000');
+            formData.append('enable_gpu', 'false');
+
+            try {
+                const result = await apiRequest('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (result && result.job_id) {
+                    document.getElementById('jobId').value = result.job_id;
+                    currentJobId = result.job_id;
+                    addResult('✨ Auto-filled', `Job ID: ${result.job_id}`);
+                }
+            } catch (error) {
+                // Error already logged in apiRequest
+            }
+        }
+
+        // Job Management
+        async function getJobStatus() {
+            const jobId = document.getElementById('jobId').value;
+            if (!jobId) {
+                addResult('❌ Job Status Error', 'Job ID is required', true);
+                return;
+            }
+            await apiRequest(`/jobs/${jobId}`);
+        }
+
+        async function downloadModel() {
+            const jobId = document.getElementById('jobId').value;
+            if (!jobId) {
+                addResult('❌ Download Error', 'Job ID is required', true);
+                return;
+            }
+            currentJobId = jobId;
+            await apiRequest(`/jobs/${jobId}/download`);
+        }
+
+        async function cancelJob() {
+            const jobId = document.getElementById('jobId').value;
+            if (!jobId) {
+                addResult('❌ Cancel Error', 'Job ID is required', true);
+                return;
+            }
+            await apiRequest(`/jobs/${jobId}`, { method: 'DELETE' });
+        }
+
+        // WebSocket Management
+        function connectWebSocket() {
+            const jobId = document.getElementById('jobId').value;
+            if (!jobId) {
+                addResult('❌ WebSocket Error', 'Job ID is required for WebSocket connection', true);
+                return;
+            }
+
+            const wsUrl = getBaseUrl().replace('http', 'ws') + `/ws/${jobId}`;
+            addResult('🔄 WebSocket', `Connecting to: ${wsUrl}`);
+
+            websocket = new WebSocket(wsUrl);
+            
+            websocket.onopen = function(event) {
+                addResult('✅ WebSocket Connected', `Connected to job ${jobId}`);
+                updateWebSocketStatus(true);
+            };
+
+            websocket.onmessage = function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    addResult('📨 WebSocket Message', data);
+                } catch (error) {
+                    addResult('📨 WebSocket Message', event.data);
+                }
+            };
+
+            websocket.onerror = function(error) {
+                addResult('❌ WebSocket Error', error.message || 'Connection error', true);
+            };
+
+            websocket.onclose = function(event) {
+                addResult('🔌 WebSocket Closed', `Code: ${event.code}, Reason: ${event.reason}`);
+                updateWebSocketStatus(false);
+            };
+        }
+
+        function disconnectWebSocket() {
+            if (websocket) {
+                websocket.close();
+                websocket = null;
+            }
+        }
+
+        function sendPing() {
+            if (websocket && websocket.readyState === WebSocket.OPEN) {
+                websocket.send('ping');
+                addResult('📤 WebSocket Ping', 'Sent ping message');
+            } else {
+                addResult('❌ WebSocket Error', 'WebSocket not connected', true);
+            }
+        }
+
+        function updateWebSocketStatus(connected) {
+            const status = document.getElementById('wsStatus');
+            const connectBtn = document.getElementById('wsConnectBtn');
+            const disconnectBtn = document.getElementById('wsDisconnectBtn');
+            const pingBtn = document.getElementById('wsPingBtn');
+
+            if (connected) {
+                status.textContent = 'WebSocket: Connected';
+                status.className = 'websocket-status ws-connected';
+                connectBtn.disabled = true;
+                disconnectBtn.disabled = false;
+                pingBtn.disabled = false;
+            } else {
+                status.textContent = 'WebSocket: Disconnected';
+                status.className = 'websocket-status ws-disconnected';
+                connectBtn.disabled = false;
+                disconnectBtn.disabled = true;
+                pingBtn.disabled = true;
+            }
+        }
+
+        // Initialize
+        window.onload = function() {
+            addResult('🌟 API Tester Ready', 'Welcome to Meshroom WebApp API Tester!');
+            addResult('💡 Quick Start', '1. Make sure your backend is running\n2. Test connection\n3. Upload images or use dummy upload\n4. Monitor progress with WebSocket');
+        };
+
+        // Auto-disconnect WebSocket on page unload
+        window.onbeforeunload = function() {
+            if (websocket) {
+                websocket.close();
+            }
+        };
+    </script>
+</body>
+</html>

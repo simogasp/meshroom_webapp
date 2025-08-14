@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Web API Tester**: Interactive HTML-based testing interface (`src/frontend/web_api_tester/web_test.html`)
+  - Point-and-click testing for all backend API endpoints
+  - Real-time WebSocket progress monitoring with visual feedback
+  - File upload support with both real files and dummy image generation
+  - Auto-population of job IDs from upload responses
+  - Live response logging with timestamps and error highlighting
+  - Automatic model download handling for completed jobs
+  - Connection testing and configurable backend URL
+  - Split-screen design for efficient testing workflow
+
 ### Changed
 
 ### Deprecated

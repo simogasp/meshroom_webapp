@@ -110,7 +110,7 @@ The project follows an incremental development strategy:
 
 ## Architecture
 
-```
+```none
 meshroom_webapp/
 ├── src/
 │   ├── backend/
@@ -170,6 +170,7 @@ meshroom_webapp/
 ### Testing
 
 Run the complete workflow test:
+
 ```bash
 python src/frontend/fake_frontend/client.py
 ```

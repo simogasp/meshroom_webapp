@@ -110,20 +110,87 @@ The project follows an incremental development strategy:
 
 ## Architecture
 
+The project follows a modular architecture with clear separation between backend services, frontend clients, and supporting infrastructure:
+
 ```none
 meshroom_webapp/
-├── src/
+├── src/                           # Source code
 │   ├── backend/
-│   │   └── fake_backend/          # Simulated processing backend
-│   │       ├── main.py            # FastAPI server
-│   │       ├── models.py          # Data models and validation
-│   │       └── jobs.py            # Job management and WebSocket
+│   │   └── fake_backend/          # FastAPI simulation server
+│   │       ├── server.py          # Main FastAPI application and endpoints
+│   │       ├── models.py          # Pydantic models and data structures
+│   │       └── jobs.py            # Job management and WebSocket handling
 │   └── frontend/
 │       └── fake_frontend/         # CLI test client
-│           └── client.py          # Test workflow implementation
+│           └── client.py          # Complete workflow testing client
+├── tests/                         # Test suite
+│   ├── integration/               # End-to-end workflow tests
+│   ├── quality/                   # Code quality and linting tests
+│   ├── security/                  # Security vulnerability tests
+│   └── run_tests.py              # Test runner with CI/CD integration
+├── assets/                        # Static assets
+│   └── avocado.glb               # Real 3D model for testing
+├── .github/workflows/             # CI/CD pipeline configuration
+├── reports/                       # Generated test and quality reports
 ├── requirements.txt               # Python dependencies
-└── README.md                     # This file
+├── requirements-test.txt          # Testing dependencies
+└── pyproject.toml                # Project configuration
 ```
+
+### Backend Architecture (v0.1)
+
+**FastAPI Application** (`src/backend/fake_backend/server.py`)
+
+- RESTful API endpoints for job management
+- WebSocket endpoint for real-time progress updates
+- CORS middleware for cross-origin requests
+- Command-line configuration with argparse
+
+**Data Models** (`src/backend/fake_backend/models.py`)  
+
+- `ProcessingJob`: Job lifecycle and metadata
+- `ImageData`: Image file information and validation
+- `UploadRequest`: Request parameter validation
+- `JobResponse`: API response structures
+
+**Job Management** (`src/backend/fake_backend/jobs.py`)
+
+- `JobManager`: Thread-safe job orchestration
+- Asynchronous processing simulation with realistic stages
+- WebSocket connection management for multiple clients
+- Model generation (both dummy and real asset loading)
+
+### Frontend Architecture (v0.1)
+
+**CLI Client** (`src/frontend/fake_frontend/client.py`)
+
+- `PhotogrammetryClient`: Complete workflow testing
+- Image generation and upload simulation
+- WebSocket-based progress monitoring with threading
+- Model download with retry logic and error handling
+
+### Development Infrastructure
+
+**Testing Framework** (`tests/`)
+
+- Integration tests for complete workflows
+- Quality assurance with automated code formatting
+- Security vulnerability scanning
+- Cross-platform compatibility testing
+
+**CI/CD Pipeline** (`.github/workflows/`)
+
+- Automated testing on Python 3.10-3.13
+- Code quality enforcement (flake8, mypy, black, isort)
+- Security analysis (bandit, safety)
+- Report generation and artifact collection
+
+### Future Architecture Evolution
+
+- **v0.2**: Web frontend with React/Vue.js browser interface
+- **v1.0**: Real Meshroom backend integration with containerized services  
+- **v2.0**: Mobile apps with native camera integration
+- **v3.0**: AR/SLAM modules with real-time processing capabilities
 
 ## API Endpoints
 
@@ -181,7 +248,23 @@ This project follows incremental development. Each phase builds upon the previou
 
 ## License
 
-[Add your license information here]
+This project is licensed under the Mozilla Public License Version 2.0 (MPL-2.0), see the [LICENSE](LICENSE) file.
+
+### Third-Party Dependencies
+
+This project uses various open-source libraries, each with their own licenses:
+
+- **FastAPI**: MIT License
+- **Pydantic**: MIT License  
+- **WebSocket-client**: Apache License 2.0
+- **Requests**: Apache License 2.0
+
+Run `pip-licenses` to see all dependency licenses:
+
+```bash
+pip install pip-licenses
+pip-licenses --format=table --with-license-file --no-license-path
+```
 
 ## Support
 

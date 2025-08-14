@@ -7,6 +7,7 @@ image upload, job management, and WebSocket communication for real-time
 progress updates.
 """
 
+import argparse
 import logging
 import os
 import sys
@@ -32,11 +33,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
 try:
-    from .jobs import JobManager, generate_dummy_model
+    from .jobs import JobManager, generate_dummy_model, generate_real_model
     from .models import ImageData, JobResponse, ProcessingJob, UploadRequest
 except ImportError:
     # Handle direct execution
-    from jobs import JobManager, generate_dummy_model  # type: ignore[no-redef]
+    from jobs import (  # type: ignore[no-redef]
+        JobManager,
+        generate_dummy_model,
+        generate_real_model,
+    )
     from models import (  # type: ignore[no-redef]
         ImageData,
         JobResponse,
@@ -50,6 +55,9 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
+
+# Global configuration for model generation
+USE_REAL_MODEL = False
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -85,7 +93,9 @@ os.makedirs(models_dir, exist_ok=True)
 @app.on_event("startup")
 async def startup_event() -> None:
     """Initialize application on startup."""
+    model_type = "real (avocado.glb)" if USE_REAL_MODEL else "fake (generated)"
     logger.info("Starting Fake Photogrammetry Backend v0.1.0")
+    logger.info(f"Model type: {model_type}")
     logger.info(f"Upload directory: {uploads_dir}")
     logger.info(f"Models directory: {models_dir}")
 
@@ -108,6 +118,7 @@ async def root() -> Dict[str, Any]:
         "service": "Fake Photogrammetry Backend",
         "version": "0.1.0",
         "status": "running",
+        "model_type": "real" if USE_REAL_MODEL else "fake",
         "active_jobs": job_manager.active_jobs_count,
         "total_jobs": job_manager.total_jobs_count,
         "timestamp": datetime.now().isoformat(),
@@ -295,22 +306,41 @@ async def download_model(job_id: str) -> FileResponse:
             status_code=400, detail=f"Job not completed (status: {job.status.value})"
         )
 
-    # Generate the dummy model file
-    model_data = generate_dummy_model(job_id)
-    model_path = os.path.join(models_dir, f"{job_id}_model.glb")
+    try:
+        # Generate the model file (real or fake based on configuration)
+        if USE_REAL_MODEL:
+            model_data = generate_real_model(job_id)
+            model_type = "real"
+        else:
+            model_data = generate_dummy_model(job_id)
+            model_type = "dummy"
 
-    # Save model to file
-    with open(model_path, "wb") as f:
-        f.write(model_data)
+        model_path = os.path.join(models_dir, f"{job_id}_model.glb")
 
-    logger.info(
-        f"Generated dummy model for job {job_id}: {len(model_data)} bytes -> "
-        f"{model_path}"
-    )
+        # Save model to file
+        with open(model_path, "wb") as f:
+            f.write(model_data)
 
-    return FileResponse(
-        path=model_path, filename=f"{job_id}_model.glb", media_type="model/gltf-binary"
-    )
+        logger.info(
+            f"Generated {model_type} model for job {job_id}: {len(model_data)} bytes -> "
+            f"{model_path}"
+        )
+
+        return FileResponse(
+            path=model_path,
+            filename=f"{job_id}_model.glb",
+            media_type="model/gltf-binary",
+        )
+
+    except FileNotFoundError as e:
+        logger.error(f"Model generation failed for job {job_id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Real model file not found. Server may be misconfigured.",
+        )
+    except IOError as e:
+        logger.error(f"Model file I/O error for job {job_id}: {e}")
+        raise HTTPException(status_code=500, detail="Error reading model file.")
 
 
 @app.delete("/jobs/{job_id}")
@@ -418,8 +448,41 @@ async def websocket_endpoint(websocket: WebSocket, job_id: str) -> None:
 if __name__ == "__main__":
     import uvicorn
 
-    # For production, bind to localhost only for security
-    # For development/testing, use 0.0.0.0 only if explicitly needed
-    host = "127.0.0.1"  # Changed from "0.0.0.0" for security
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(
+        description="Fake Photogrammetry Backend Server",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    parser.add_argument(
+        "--host", type=str, default="127.0.0.1", help="Host to bind the server to"
+    )
+    parser.add_argument(
+        "--port", type=int, default=8000, help="Port to bind the server to"
+    )
+    parser.add_argument(
+        "--real-model",
+        action="store_true",
+        help="Use real model (avocado.glb) instead of generated fake model",
+    )
+    parser.add_argument(
+        "--reload", action="store_true", help="Enable auto-reload for development"
+    )
 
-    uvicorn.run("server:app", host=host, port=8000, reload=True, log_level="info")
+    args = parser.parse_args()
+
+    # Set global configuration
+    USE_REAL_MODEL = args.real_model
+
+    # Log configuration
+    model_type = "real (avocado.glb)" if USE_REAL_MODEL else "fake (generated)"
+    logger.info(f"Starting server with {model_type} models")
+    logger.info(f"Server will bind to {args.host}:{args.port}")
+
+    # Start server
+    uvicorn.run(
+        "server:app",
+        host=args.host,
+        port=args.port,
+        reload=args.reload,
+        log_level="info",
+    )

@@ -7,6 +7,7 @@ and WebSocket communication for the fake backend.
 
 import asyncio
 import logging
+import os
 import random
 from datetime import datetime
 from typing import Dict, List, Optional, Set
@@ -50,6 +51,45 @@ def generate_dummy_model(job_id: str) -> bytes:
     metadata = f"Generated for job: {job_id}".encode("utf-8")
 
     return header + len(metadata).to_bytes(4, "little") + metadata + model_data
+
+
+def generate_real_model(job_id: str) -> bytes:
+    """
+    Load a real GLB model file from the assets folder.
+
+    Args:
+        job_id: The job identifier (used for logging, not file selection)
+
+    Returns:
+        Real GLB file content as bytes from assets/avocado.glb
+
+    Raises:
+        FileNotFoundError: If the avocado.glb file is not found
+        IOError: If there's an error reading the file
+    """
+    # Get the project root path (4 levels up from this file)
+    current_file = os.path.abspath(__file__)
+    project_root = os.path.dirname(
+        os.path.dirname(os.path.dirname(os.path.dirname(current_file)))
+    )
+    asset_path = os.path.join(project_root, "assets", "avocado.glb")
+
+    try:
+        with open(asset_path, "rb") as f:
+            model_data = f.read()
+
+        logger.info(
+            f"Loaded real model for job {job_id}: {len(model_data)} bytes from {asset_path}"
+        )
+        return model_data
+
+    except FileNotFoundError as e:
+        logger.error(f"Real model file not found: {asset_path}")
+        raise FileNotFoundError(f"Asset file not found: {asset_path}") from e
+
+    except IOError as e:
+        logger.error(f"Error reading real model file: {e}")
+        raise IOError(f"Error reading asset file: {asset_path}") from e
 
 
 class JobManager:

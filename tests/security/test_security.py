@@ -273,27 +273,31 @@ class SecurityTester:
             ),
             "safety_check": {
                 "status": "PASS" if safety_success else "FAIL",
-                "vulnerabilities_found": len(safety_data)
-                if safety_data and not safety_data.get("network_error")
-                else 0,
-                "network_error": safety_data.get("network_error", False)
-                if safety_data
-                else False,
+                "vulnerabilities_found": (
+                    len(safety_data)
+                    if safety_data and not safety_data.get("network_error")
+                    else 0
+                ),
+                "network_error": (
+                    safety_data.get("network_error", False) if safety_data else False
+                ),
             },
             "bandit_scan": {
                 "status": "PASS" if bandit_success else "FAIL",
-                "total_issues": len(bandit_data.get("results", []))
-                if bandit_data
-                else 0,
-                "high_severity_issues": len(
-                    [
-                        issue
-                        for issue in bandit_data.get("results", [])
-                        if issue.get("issue_severity", "").lower() == "high"
-                    ]
-                )
-                if bandit_data
-                else 0,
+                "total_issues": (
+                    len(bandit_data.get("results", [])) if bandit_data else 0
+                ),
+                "high_severity_issues": (
+                    len(
+                        [
+                            issue
+                            for issue in bandit_data.get("results", [])
+                            if issue.get("issue_severity", "").lower() == "high"
+                        ]
+                    )
+                    if bandit_data
+                    else 0
+                ),
             },
         }
 

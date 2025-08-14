@@ -19,23 +19,27 @@ The main entry point is `tests/run_tests.py`, which provides:
 ### 🎯 Code Quality Tools
 
 #### Linting with Flake8
+
 - **Configuration**: `.flake8`
 - **Standards**: PEP 8 compliance with Black compatibility
 - **Line length**: 88 characters
 - **Exclusions**: Build artifacts, reports, virtual environments
 
 #### Type Checking with MyPy
+
 - **Configuration**: `pyproject.toml` and `mypy.ini`
 - **Features**: Strict optional checking, redundant cast warnings
 - **Target**: Python 3.9+
 
 #### Code Formatting with Black
+
 - **Configuration**: `pyproject.toml`
 - **Line length**: 88 characters
 - **Target**: Python 3.9+
 - **Integration**: Compatible with flake8 and isort
 
 #### Import Sorting with isort
+
 - **Configuration**: `pyproject.toml`
 - **Profile**: Black compatibility
 - **Features**: Automatic import organization
@@ -43,11 +47,13 @@ The main entry point is `tests/run_tests.py`, which provides:
 ### 🛡️ Security Tools
 
 #### Dependency Vulnerability Scanning (Safety)
+
 - **Tool**: `safety` - PyPI vulnerability database
 - **Features**: Known vulnerability detection in dependencies
 - **Network handling**: Graceful degradation on connectivity issues
 
 #### Static Security Analysis (Bandit)
+
 - **Configuration**: `.bandit`
 - **Features**: AST-based security issue detection
 - **Focus**: High and medium severity issues
@@ -56,6 +62,7 @@ The main entry point is `tests/run_tests.py`, which provides:
 ### ⚙️ Backend Management
 
 #### Backend Manager (`tests/scripts/backend_manager.py`)
+
 - **Features**: Automated lifecycle management
 - **Functions**: Start, stop, status, health checks
 - **PID tracking**: Reliable process management
@@ -65,11 +72,13 @@ The main entry point is `tests/run_tests.py`, which provides:
 ### Local Development
 
 #### Run All Tests
+
 ```bash
 python tests/run_tests.py
 ```
 
 #### Run Specific Test Types
+
 ```bash
 # Integration tests only (quick mode)
 python tests/run_tests.py --integration --quick
@@ -85,12 +94,14 @@ python tests/run_tests.py --security
 ```
 
 #### Auto-fix Code Quality Issues
+
 ```bash
 # Fix formatting and import issues automatically
 python tests/run_tests.py --quality --fix
 ```
 
 #### Verbose Output
+
 ```bash
 python tests/run_tests.py --verbose DEBUG
 ```
@@ -98,6 +109,7 @@ python tests/run_tests.py --verbose DEBUG
 ### Manual Tool Usage
 
 #### Format Code
+
 ```bash
 # Format with black
 black src/ tests/
@@ -107,6 +119,7 @@ isort src/ tests/
 ```
 
 #### Run Individual Quality Checks
+
 ```bash
 # Linting
 flake8 src/ tests/
@@ -119,6 +132,7 @@ bandit -r src/ -f json -c .bandit
 ```
 
 #### Backend Management
+
 ```bash
 # Start backend
 python tests/scripts/backend_manager.py start
@@ -135,14 +149,17 @@ python tests/scripts/backend_manager.py stop
 ### GitHub Actions
 
 The pipeline runs on:
+
 - **Push**: to `master`, `develop`, `dev/ci` branches
 - **Pull Request**: to `master`
 
 #### Matrix Testing
+
 - **Python versions**: 3.10, 3.11, 3.12, 3.13
 - **OS**: Ubuntu Latest
 
 #### Jobs
+
 1. **Integration Tests**: Cross-version compatibility testing
 2. **Quality Tests**: Code quality enforcement
 3. **Security Tests**: Vulnerability and security scanning
@@ -150,6 +167,7 @@ The pipeline runs on:
 ### Artifacts and Reports
 
 #### Generated Reports
+
 - **Location**: `reports/` directory (excluded from version control)
 - **Quality Reports**: `reports/quality/`
   - `flake8_report.txt`
@@ -162,27 +180,32 @@ The pipeline runs on:
   - `security_summary.json`
 
 #### GitHub Actions Artifacts
+
 - **Quality Reports**: 30-day retention
 - **Security Reports**: 30-day retention (internal), 90-day retention (summary)
 
 ## Configuration Files
 
 ### Quality Tools Configuration
+
 - **`pyproject.toml`**: Black, isort, bandit, coverage, mypy settings
 - **`.flake8`**: Flake8 linting configuration
 - **`mypy.ini`**: Additional MyPy configuration
 
-### Security Configuration  
+### Security Configuration
+
 - **`.bandit`**: Bandit security scanner settings
 - **Exclusions**: Test code, demo implementations
 - **Focus**: High/medium severity security issues
 
 ### Project Configuration
+
 - **`.gitignore`**: Excludes reports, build artifacts, temporary files
 
 ## Quality Standards
 
 The pipeline enforces:
+
 - ✅ **Zero linting errors** (flake8)
 - ✅ **Clean type checking** (mypy)
 - ✅ **Consistent formatting** (black)
@@ -195,10 +218,12 @@ The pipeline enforces:
 ### Common Issues
 
 #### Network Connectivity
+
 - **Safety check failures**: The pipeline gracefully handles network issues when safety cannot reach the PyPI vulnerability database
 - **Solution**: The tests will pass with a warning if network connectivity is the only issue
 
 #### Backend Startup Issues
+
 ```bash
 # Check if backend is already running
 python tests/scripts/backend_manager.py status
@@ -211,6 +236,7 @@ python tests/scripts/backend_manager.py start
 ```
 
 #### Code Quality Failures
+
 ```bash
 # Auto-fix most formatting issues
 python tests/run_tests.py --quality --fix
@@ -221,12 +247,14 @@ python tests/run_tests.py --quality --fix
 ### Environment Setup
 
 #### Development Dependencies
+
 ```bash
 pip install -r requirements.txt
 pip install -r requirements-test.txt
 ```
 
 #### Environment Variables
+
 No special environment variables required for basic usage.
 
 ## Security Considerations
@@ -239,6 +267,7 @@ No special environment variables required for basic usage.
 ## Performance
 
 ### Test Execution Times
+
 - **Quick integration tests**: ~10 seconds
 - **Full integration tests**: ~45 seconds
 - **Quality tests**: ~5 seconds
@@ -246,6 +275,7 @@ No special environment variables required for basic usage.
 - **Complete suite**: ~60 seconds
 
 ### Optimization Options
+
 - Use `--quick` flag for faster integration testing during development
 - Run specific test types (`--quality`, `--security`, `--integration`) for focused testing
 
@@ -261,6 +291,7 @@ When contributing to the project:
 ## Support
 
 For issues with the CI/CD pipeline:
+
 1. Check the generated reports in `reports/` directory
 2. Run individual tools manually for detailed output
 3. Use verbose mode (`--verbose DEBUG`) for detailed logging

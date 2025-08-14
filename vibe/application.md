@@ -75,7 +75,7 @@ The project will be developed incrementally in **steps**, starting with a minima
 * Replace the fake backend with a real Meshroom server.
 * Integrate actual 3D reconstruction processing.
 * Ensure results are correctly returned and displayed in the frontend.
-* 
+
 ---
 
 ### **Step 4 – Mobile Camera Integration (v2.0)**

@@ -64,7 +64,7 @@ project_root/
 
 ```bash
 cd src/backend/fake_backend
-python main.py
+python server.py
 ```
 
 The backend will automatically create and use the output directories.
@@ -101,7 +101,7 @@ You can verify the output structure by running the backend and client:
 ```bash
 # Terminal 1 - Start backend
 cd src/backend/fake_backend
-python main.py
+python server.py
 
 # Terminal 2 - Run client test
 cd src/frontend/fake_frontend

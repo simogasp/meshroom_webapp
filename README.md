@@ -89,7 +89,7 @@ The project follows an incremental development strategy:
 
     ```bash
     cd src/backend/fake_backend
-    python main.py
+    python server.py
     ```
 
     The server will start at `http://localhost:8000`

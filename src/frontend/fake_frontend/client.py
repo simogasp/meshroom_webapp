@@ -448,7 +448,7 @@ def main() -> None:
         logger.error(f"Error: {e}")
         logger.info("\nPlease ensure the backend server is running:")
         logger.info("  cd src/backend/fake_backend")
-        logger.info("  python main.py")
+        logger.info("  python server.py")
         return
 
     logger.info("Backend is running and healthy!")

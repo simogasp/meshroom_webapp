@@ -422,4 +422,4 @@ if __name__ == "__main__":
     # For development/testing, use 0.0.0.0 only if explicitly needed
     host = "127.0.0.1"  # Changed from "0.0.0.0" for security
 
-    uvicorn.run("main:app", host=host, port=8000, reload=True, log_level="info")
+    uvicorn.run("server:app", host=host, port=8000, reload=True, log_level="info")

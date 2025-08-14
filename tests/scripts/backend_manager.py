@@ -104,9 +104,9 @@ class BackendManager:
             logger.error(f"Backend directory not found: {self.backend_dir}")
             return False
 
-        main_py = self.backend_dir / "main.py"
+        main_py = self.backend_dir / "server.py"
         if not main_py.exists():
-            logger.error(f"main.py not found in: {self.backend_dir}")
+            logger.error(f"server.py not found in: {self.backend_dir}")
             return False
 
         try:
@@ -114,7 +114,7 @@ class BackendManager:
 
             # Start the backend process
             process = subprocess.Popen(
-                [sys.executable, "main.py"],
+                [sys.executable, "server.py"],
                 cwd=self.backend_dir,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,

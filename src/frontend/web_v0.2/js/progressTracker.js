@@ -247,7 +247,7 @@ export class ProgressTracker {
    */
   async pollProgress() {
     try {
-      const response = await fetch(`/api/jobs/${this.jobId}/progress`);
+      const response = await fetch(`/jobs/${this.jobId}`);
       if (response.ok) {
         const data = await response.json();
         this.handleProgressUpdate(data);
@@ -476,7 +476,7 @@ export class ProgressTracker {
     if (!this.jobId) return;
 
     try {
-      const response = await fetch(`/api/jobs/${this.jobId}/cancel`, {
+      const response = await fetch(`/jobs/${this.jobId}/cancel`, {
         method: 'POST'
       });
 

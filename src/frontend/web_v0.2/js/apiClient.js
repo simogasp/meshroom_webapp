@@ -48,12 +48,21 @@ export class ApiClient {
   async request(endpoint, options = {}) {
     const url = `${this.options.baseUrl}${endpoint}`;
     const requestOptions = {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-      },
       ...options
     };
+
+    // Don't set Content-Type for FormData, let the browser handle it
+    if (!(options.body instanceof FormData)) {
+      requestOptions.headers = {
+        'Content-Type': 'application/json',
+        ...options.headers
+      };
+    } else {
+      // For FormData, only include custom headers, not Content-Type
+      requestOptions.headers = {
+        ...options.headers
+      };
+    }
 
     // Add timeout
     const controller = new AbortController();
@@ -112,7 +121,7 @@ export class ApiClient {
     const {
       onProgress,
       onUploadId,
-      endpoint = '/api/upload',
+      endpoint = '/upload',
       ...otherOptions
     } = options;
 
@@ -192,37 +201,40 @@ export class ApiClient {
 
   /**
    * Start processing job
-   * @param {File} file - Input file
+   * @param {File[]} files - Input files
    * @param {Object} parameters - Processing parameters
    * @returns {Promise<string>} Job ID
    */
-  async startProcessing(file, parameters) {
+  async startProcessing(files, parameters = {}) {
     try {
-      // Upload file first
-      const uploadResult = await this.uploadFile(file, {
-        onProgress: (progress) => {
-          console.log('Upload progress:', progress);
-        }
+      const formData = new FormData();
+      
+      // Add files to FormData
+      files.forEach((file) => {
+        formData.append('files', file);
       });
-
-      if (!uploadResult.file_id) {
-        throw new Error('Upload did not return file ID');
+      
+      // Add parameters to FormData
+      if (parameters.quality) {
+        formData.append('quality', parameters.quality);
+      }
+      if (parameters.max_features) {
+        formData.append('max_features', parameters.max_features.toString());
+      }
+      if (parameters.enable_gpu !== undefined) {
+        formData.append('enable_gpu', parameters.enable_gpu.toString());
       }
 
-      // Start processing job
-      const jobResult = await this.request('/api/jobs', {
+      const result = await this.request('/upload', {
         method: 'POST',
-        body: JSON.stringify({
-          file_id: uploadResult.file_id,
-          parameters: parameters
-        })
+        body: formData
       });
 
-      if (!jobResult.job_id) {
-        throw new Error('Job creation did not return job ID');
+      if (!result.job_id) {
+        throw new Error('Upload did not return job ID');
       }
 
-      return jobResult.job_id;
+      return result.job_id;
     } catch (error) {
       throw new Error(`Failed to start processing: ${error.message}`);
     }
@@ -234,7 +246,7 @@ export class ApiClient {
    * @returns {Promise<Object>} Job status
    */
   async getJobStatus(jobId) {
-    return await this.request(`/api/jobs/${jobId}/status`);
+    return await this.request(`/jobs/${jobId}/status`);
   }
 
   /**
@@ -243,7 +255,7 @@ export class ApiClient {
    * @returns {Promise<Object>} Job progress
    */
   async getJobProgress(jobId) {
-    return await this.request(`/api/jobs/${jobId}/progress`);
+    return await this.request(`/jobs/${jobId}/progress`);
   }
 
   /**
@@ -252,7 +264,7 @@ export class ApiClient {
    * @returns {Promise<Object>} Job results
    */
   async getJobResults(jobId) {
-    return await this.request(`/api/jobs/${jobId}/results`);
+    return await this.request(`/jobs/${jobId}/results`);
   }
 
   /**
@@ -261,7 +273,7 @@ export class ApiClient {
    * @returns {Promise<Object>} Cancellation result
    */
   async cancelJob(jobId) {
-    return await this.request(`/api/jobs/${jobId}/cancel`, {
+    return await this.request(`/jobs/${jobId}/cancel`, {
       method: 'POST'
     });
   }
@@ -272,7 +284,7 @@ export class ApiClient {
    * @returns {Promise<Object>} Deletion result
    */
   async deleteJob(jobId) {
-    return await this.request(`/api/jobs/${jobId}`, {
+    return await this.request(`/jobs/${jobId}`, {
       method: 'DELETE'
     });
   }
@@ -285,7 +297,7 @@ export class ApiClient {
   async listJobs(filters = {}) {
     const params = new URLSearchParams(filters);
     const query = params.toString() ? `?${params.toString()}` : '';
-    return await this.request(`/api/jobs${query}`);
+    return await this.request(`/jobs${query}`);
   }
 
   /**
@@ -338,7 +350,7 @@ export class ApiClient {
    * @returns {Promise<Object>} Health status
    */
   async getHealthStatus() {
-    return await this.request('/api/health');
+    return await this.request('/health');
   }
 
   /**
@@ -346,7 +358,7 @@ export class ApiClient {
    * @returns {Promise<Object>} Server information
    */
   async getServerInfo() {
-    return await this.request('/api/info');
+    return await this.request('/info');
   }
 
   /**

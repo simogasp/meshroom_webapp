@@ -325,9 +325,12 @@ export class App {
       this.log('info', 'Starting processing...');
       this.state.isProcessing = true;
       
-      // Upload file and start processing
+      // Get all selected file objects
+      const fileObjects = this.state.selectedFiles.map(fileData => fileData.file);
+      
+      // Upload files and start processing
       const jobId = await this.apiClient.startProcessing(
-        this.state.currentFile,
+        fileObjects,
         this.state.parameters
       );
       

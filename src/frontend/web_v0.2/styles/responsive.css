@@ -1,0 +1,477 @@
+/* ==========================================================================
+   Responsive Design - Mobile, tablet, and desktop breakpoints
+   ========================================================================== */
+
+/* Small mobile devices (320px and up) */
+@media (max-width: 479px) {
+  :root {
+    --spacing-xs: 0.25rem;
+    --spacing-sm: 0.375rem;
+    --spacing-md: 0.75rem;
+    --spacing-lg: 1rem;
+    --spacing-xl: 1.5rem;
+    --spacing-2xl: 2rem;
+    --spacing-3xl: 2.5rem;
+  }
+
+  .app-container {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto 1fr auto auto;
+    grid-template-areas:
+      "header"
+      "upload" 
+      "main"
+      "log"
+      "progress";
+  }
+
+  .app-header {
+    padding: var(--spacing-md);
+  }
+
+  .app-title {
+    font-size: 1.25rem;
+    text-align: center;
+  }
+
+  .version {
+    text-align: center;
+    margin-top: var(--spacing-xs);
+  }
+
+  .upload-section {
+    padding: var(--spacing-lg);
+  }
+
+  .upload-area {
+    padding: var(--spacing-lg);
+    min-height: 120px;
+  }
+
+  .main-content {
+    grid-template-columns: 1fr;
+    grid-template-areas: 
+      "viewer"
+      "parameters";
+  }
+
+  .parameters-panel {
+    padding: var(--spacing-lg);
+    max-height: 400px;
+    overflow-y: auto;
+  }
+
+  .parameter-row {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-md);
+  }
+
+  .progress-sidebar {
+    padding: var(--spacing-lg);
+  }
+
+  .log-section {
+    padding: var(--spacing-lg);
+    height: 200px;
+  }
+
+  .model-viewer {
+    height: 300px;
+  }
+
+  .modal-content {
+    margin: var(--spacing-md);
+    width: calc(100% - 2rem);
+    max-height: calc(100vh - 2rem);
+  }
+
+  .modal-header {
+    padding: var(--spacing-md);
+  }
+
+  .modal-body {
+    padding: var(--spacing-md);
+  }
+
+  .modal-actions {
+    padding: var(--spacing-md);
+    flex-direction: column-reverse;
+  }
+
+  .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .model-actions {
+    flex-direction: column;
+    gap: var(--spacing-sm);
+  }
+
+  .stage-progress-container {
+    gap: var(--spacing-sm);
+  }
+
+  .stage-progress {
+    padding: var(--spacing-sm);
+  }
+
+  .viewer-controls {
+    position: relative;
+    top: auto;
+    left: auto;
+    margin-bottom: var(--spacing-sm);
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+}
+
+/* Large mobile devices (480px - 767px) */
+@media (min-width: 480px) and (max-width: 767px) {
+  .app-container {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto 1fr auto auto;
+    grid-template-areas:
+      "header"
+      "upload"
+      "main"
+      "progress"
+      "log";
+  }
+
+  .main-content {
+    grid-template-columns: 1fr;
+    grid-template-areas: 
+      "viewer"
+      "parameters";
+  }
+
+  .parameter-row {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-md);
+  }
+
+  .model-viewer {
+    height: 350px;
+  }
+
+  .upload-area {
+    min-height: 140px;
+  }
+
+  .modal-content {
+    margin: var(--spacing-lg);
+    width: calc(100% - 3rem);
+  }
+
+  .modal-actions {
+    gap: var(--spacing-md);
+  }
+}
+
+/* Tablet devices (768px - 1023px) */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .app-container {
+    grid-template-columns: 1fr 300px;
+    grid-template-rows: auto auto 1fr auto;
+    grid-template-areas:
+      "header progress"
+      "upload progress"
+      "main progress"
+      "log log";
+  }
+
+  .main-content {
+    grid-template-columns: 1fr;
+    grid-template-areas: 
+      "viewer"
+      "parameters";
+  }
+
+  .progress-sidebar {
+    padding: var(--spacing-lg);
+  }
+
+  .parameters-panel {
+    max-height: 500px;
+    overflow-y: auto;
+  }
+
+  .parameter-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .model-viewer {
+    height: 400px;
+  }
+
+  .log-section {
+    height: 250px;
+  }
+
+  .upload-area {
+    min-height: 160px;
+  }
+}
+
+/* Small desktop (1024px - 1199px) */
+@media (min-width: 1024px) and (max-width: 1199px) {
+  .app-container {
+    grid-template-columns: 1fr 350px;
+    grid-template-rows: auto auto 1fr auto;
+  }
+
+  .main-content {
+    grid-template-columns: 2fr 1fr;
+    grid-template-areas: "viewer parameters";
+  }
+
+  .model-viewer {
+    height: 450px;
+  }
+
+  .parameters-panel {
+    max-height: none;
+    overflow-y: auto;
+  }
+
+  .parameter-row {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-lg);
+  }
+}
+
+/* Large desktop (1200px and up) */
+@media (min-width: 1200px) {
+  .app-container {
+    grid-template-columns: 1fr 400px;
+  }
+
+  .main-content {
+    grid-template-columns: 2fr 1fr;
+  }
+
+  .model-viewer {
+    height: 500px;
+  }
+
+  .parameter-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .modal-content {
+    max-width: 600px;
+  }
+}
+
+/* Ultra-wide displays (1400px and up) */
+@media (min-width: 1400px) {
+  .app-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    grid-template-columns: 1fr 450px;
+  }
+
+  .main-content {
+    grid-template-columns: 3fr 2fr;
+  }
+
+  .model-viewer {
+    height: 600px;
+  }
+
+  .parameters-panel {
+    padding: var(--spacing-2xl);
+  }
+}
+
+/* ==========================================================================
+   Print Styles
+   ========================================================================== */
+
+@media print {
+  * {
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+  }
+
+  .app-container {
+    display: block !important;
+    background: white !important;
+  }
+
+  .app-header,
+  .upload-section,
+  .progress-sidebar,
+  .log-section,
+  .modal {
+    display: none !important;
+  }
+
+  .main-content {
+    display: block !important;
+    page-break-inside: avoid;
+  }
+
+  .model-viewer {
+    border: 2px solid #000;
+    height: 400px !important;
+  }
+
+  .parameters-panel {
+    margin-top: 20px;
+    border: 1px solid #ccc;
+    padding: 20px;
+  }
+
+  .btn {
+    display: none !important;
+  }
+}
+
+/* ==========================================================================
+   High DPI / Retina Display Optimizations
+   ========================================================================== */
+
+@media (-webkit-min-device-pixel-ratio: 2),
+       (min-resolution: 192dpi),
+       (min-resolution: 2dppx) {
+  .loading-spinner {
+    border-width: 3px;
+  }
+
+  .checkmark {
+    border-width: 1px;
+  }
+
+  .checkbox:checked + .checkmark::after {
+    border-width: 0 1px 1px 0;
+  }
+
+  .progress-bar {
+    height: 10px;
+  }
+}
+
+/* ==========================================================================
+   Dark Mode Preferences
+   ========================================================================== */
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --primary-color: #3b82f6;
+    --primary-hover: #2563eb;
+    --success-color: #10b981;
+    --warning-color: #f59e0b;
+    --danger-color: #ef4444;
+    --info-color: #06b6d4;
+
+    --gray-50: #18181b;
+    --gray-100: #27272a;
+    --gray-200: #3f3f46;
+    --gray-300: #52525b;
+    --gray-400: #71717a;
+    --gray-500: #a1a1aa;
+    --gray-600: #d4d4d8;
+    --gray-700: #e4e4e7;
+    --gray-800: #f4f4f5;
+    --gray-900: #fafafa;
+
+    --white: #09090b;
+    --text-primary: #fafafa;
+    --text-secondary: #e4e4e7;
+    --text-muted: #a1a1aa;
+  }
+
+  .upload-area {
+    background-color: var(--gray-100);
+    border-color: var(--gray-300);
+  }
+
+  .model-viewer {
+    background: linear-gradient(135deg, var(--gray-200), var(--gray-100));
+  }
+
+  .viewer-btn {
+    background: rgba(39, 39, 42, 0.9);
+    border-color: var(--gray-300);
+    color: var(--gray-700);
+  }
+
+  .viewer-btn:hover {
+    background: var(--gray-200);
+    border-color: var(--primary-color);
+  }
+
+  .loading-overlay {
+    background: rgba(9, 9, 11, 0.9);
+  }
+
+  .modal {
+    background: rgba(9, 9, 11, 0.7);
+  }
+}
+
+/* ==========================================================================
+   Motion Preferences
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .loading-spinner {
+    animation: none;
+    border-left-color: var(--gray-400);
+  }
+
+  .progress-fill {
+    transition: none;
+  }
+}
+
+/* ==========================================================================
+   Focus and Accessibility
+   ========================================================================== */
+
+@media (prefers-reduced-transparency: reduce) {
+  .modal {
+    backdrop-filter: none;
+  }
+
+  .loading-overlay {
+    backdrop-filter: none;
+  }
+
+  .viewer-btn {
+    backdrop-filter: none;
+    background: rgba(255, 255, 255, 1);
+  }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+  :root {
+    --primary-color: #0000ff;
+    --success-color: #008000;
+    --danger-color: #ff0000;
+    --warning-color: #ff8c00;
+  }
+
+  .upload-area {
+    border-width: 3px;
+    border-style: solid;
+  }
+
+  .btn {
+    border-width: 2px;
+    font-weight: 700;
+  }
+
+  .progress-bar {
+    border: 2px solid var(--gray-900);
+  }
+}

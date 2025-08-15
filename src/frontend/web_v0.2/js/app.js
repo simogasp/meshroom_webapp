@@ -53,6 +53,13 @@ export class App {
       this.initializeComponents();
       this.setupEventListeners();
       this.loadSavedState();
+      
+      // Set initial processing button state
+      this.updateProcessingButtonState();
+      
+      // Ensure key sections are always accessible
+      this.ensureSectionsEnabled();
+      
       this.log('info', 'Application initialized successfully');
     } catch (error) {
       this.log('error', `Failed to initialize application: ${error.message}`);
@@ -81,6 +88,9 @@ export class App {
       onParametersChanged: (params) => this.handleParametersChanged(params),
       onProcessStart: () => this.handleProcessStart()
     });
+
+    // Always enable parameter panel - it should be accessible
+    this.components.parameterPanel?.setEnabled(true);
 
     // Initialize ProgressTracker
     this.components.progressTracker = new ProgressTracker({
@@ -134,14 +144,14 @@ export class App {
 
       // ESC to close modals
       if (e.key === 'Escape') {
-        this.components.modal.closeModal();
+        this.components.modal?.closeModal();
       }
     });
 
     // Handle window visibility changes
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden && this.state.isProcessing) {
-        this.components.progressTracker.refreshProgress();
+        this.components.progressTracker?.refreshProgress();
       }
     });
 
@@ -158,7 +168,7 @@ export class App {
     window.addEventListener('online', () => {
       this.log('info', 'Connection restored');
       if (this.state.isProcessing) {
-        this.components.progressTracker.refreshProgress();
+        this.components.progressTracker?.refreshProgress();
       }
     });
 
@@ -193,12 +203,18 @@ export class App {
         // Reset previous state
         this.resetProcessingState();
         
-        // Enable parameter panel (temporarily disabled)
-        // this.components.parameterPanel?.setEnabled(true);
+        // Enable parameter panel (always accessible)
+        this.components.parameterPanel?.setEnabled(true);
+        
+        // Update processing button state
+        this.updateProcessingButtonState();
         
         // Load default parameters based on file type
         const defaultParams = this.getDefaultParameters(firstFile);
-        // this.components.parameterPanel?.setParameters(defaultParams);
+        this.components.parameterPanel?.setParameters(defaultParams);
+        
+        // Ensure sections remain enabled
+        this.ensureSectionsEnabled();
         
         this.saveState();
       }
@@ -230,6 +246,13 @@ export class App {
     }
     
     this.state.selectedFiles = this.components.fileManager.getSelectedFiles();
+    
+    // Update processing button state
+    this.updateProcessingButtonState();
+    
+    // Ensure sections remain enabled
+    this.ensureSectionsEnabled();
+    
     this.saveState();
   }
 
@@ -241,8 +264,19 @@ export class App {
     this.state.currentFile = null;
     this.state.selectedFiles = [];
     this.resetProcessingState();
-    this.components.parameterPanel.setEnabled(false);
-    this.components.modelViewer.clear();
+    // Keep parameter panel enabled - don't disable it
+    
+    // Safely clear model viewer if available
+    if (this.components.modelViewer && typeof this.components.modelViewer.clear === 'function') {
+      this.components.modelViewer.clear();
+    }
+    
+    // Update processing button state
+    this.updateProcessingButtonState();
+    
+    // Ensure sections remain enabled
+    this.ensureSectionsEnabled();
+    
     this.saveState();
   }
 
@@ -276,7 +310,14 @@ export class App {
    */
   async handleProcessStart() {
     if (!this.canStartProcessing()) {
-      this.log('warning', 'Cannot start processing - missing file or already processing');
+      const fileCount = this.state.selectedFiles.length;
+      if (this.state.isProcessing) {
+        this.log('warning', 'Cannot start processing - already processing');
+        this.showError('Already Processing', 'A processing job is already running. Please wait for it to complete.');
+      } else if (fileCount < 2) {
+        this.log('warning', `Cannot start processing - only ${fileCount} image${fileCount !== 1 ? 's' : ''} selected`);
+        this.showError('Insufficient Images', `You need at least 2 images to start processing. Currently ${fileCount} image${fileCount !== 1 ? 's are' : ' is'} selected.`);
+      }
       return;
     }
 
@@ -294,7 +335,7 @@ export class App {
       this.log('info', `Processing started with job ID: ${jobId}`);
       
       // Start progress tracking
-      this.components.progressTracker.startTracking(jobId);
+      this.components.progressTracker?.startTracking(jobId);
       
       this.saveState();
     } catch (error) {
@@ -324,8 +365,12 @@ export class App {
       
       // Load model in viewer
       if (results.modelUrl) {
-        await this.components.modelViewer.loadModel(results.modelUrl);
-        this.log('info', 'Model loaded in 3D viewer');
+        if (this.components.modelViewer && typeof this.components.modelViewer.loadModel === 'function') {
+          await this.components.modelViewer.loadModel(results.modelUrl);
+          this.log('info', 'Model loaded in 3D viewer');
+        } else {
+          this.log('warning', '3D model viewer not available');
+        }
       }
       
       this.saveState();
@@ -409,7 +454,7 @@ export class App {
    * @returns {boolean} Whether processing can start
    */
   canStartProcessing() {
-    return this.state.currentFile && !this.state.isProcessing;
+    return this.state.selectedFiles.length >= 2 && !this.state.isProcessing;
   }
 
   /**
@@ -499,6 +544,58 @@ export class App {
       localStorage.setItem('meshroom_webapp_state', JSON.stringify(stateToSave));
     } catch (error) {
       this.log('warning', 'Failed to save state to localStorage');
+    }
+  }
+
+  /**
+   * Ensure key sections remain accessible
+   */
+  ensureSectionsEnabled() {
+    // Always keep upload and parameters sections accessible
+    const uploadSection = document.getElementById('uploadSection');
+    const parametersSection = document.getElementById('parametersSection');
+    
+    if (uploadSection && !uploadSection.classList.contains('active')) {
+      uploadSection.classList.add('active');
+    }
+    
+    if (parametersSection && !parametersSection.classList.contains('active')) {
+      parametersSection.classList.add('active');
+    }
+  }
+
+  /**
+   * Update the processing button state based on file count
+   */
+  updateProcessingButtonState() {
+    const startProcessingBtn = document.getElementById('startProcessing');
+    const imageRequirement = document.getElementById('imageRequirement');
+    const fileCount = this.state.selectedFiles.length;
+
+    if (startProcessingBtn) {
+      if (fileCount >= 2) {
+        startProcessingBtn.disabled = false;
+        startProcessingBtn.textContent = 'Start Processing';
+      } else {
+        startProcessingBtn.disabled = true;
+        startProcessingBtn.textContent = fileCount === 0 
+          ? 'Start Processing (no images selected)' 
+          : 'Start Processing (need at least 2 images)';
+      }
+    }
+
+    // Update requirement notice
+    if (imageRequirement) {
+      imageRequirement.className = 'requirement-notice';
+      if (fileCount === 0) {
+        imageRequirement.innerHTML = '<strong>Note:</strong> At least 2 images are required to start processing.';
+      } else if (fileCount === 1) {
+        imageRequirement.className += ' error';
+        imageRequirement.innerHTML = '<strong>Missing:</strong> You need at least 1 more image to start processing.';
+      } else {
+        imageRequirement.className += ' success';
+        imageRequirement.innerHTML = `<strong>Ready:</strong> ${fileCount} images selected. You can now start processing.`;
+      }
     }
   }
 

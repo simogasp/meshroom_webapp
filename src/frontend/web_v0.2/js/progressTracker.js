@@ -11,7 +11,7 @@
 export class ProgressTracker {
   constructor(options = {}) {
     this.options = {
-      wsUrl: 'ws://localhost:8000/ws/progress',
+      wsUrl: 'ws://localhost:8000/ws',
       pollInterval: 5000, // 5 seconds fallback polling
       onProgressUpdate: () => {},
       onProcessComplete: () => {},
@@ -570,7 +570,14 @@ export class ProgressTracker {
    * @param {*} data - Additional data
    */
   log(level, message, data = null) {
-    // This would integrate with the main app's logging system
-    console[level](`[ProgressTracker] ${message}`, data);
+    // Ensure valid console method exists, fallback to log
+    const validLevels = ['log', 'info', 'warn', 'error', 'debug'];
+    const logLevel = validLevels.includes(level) ? level : 'log';
+    
+    if (data) {
+      console[logLevel](`[ProgressTracker] ${message}`, data);
+    } else {
+      console[logLevel](`[ProgressTracker] ${message}`);
+    }
   }
 }

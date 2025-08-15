@@ -43,8 +43,11 @@ export class ModelViewer {
    */
   async init() {
     try {
+      console.log('ModelViewer: Starting initialization...');
       await this.loadThreeJS();
+      console.log('ModelViewer: Three.js loaded successfully');
       this.setupElements();
+      console.log('ModelViewer: Elements setup complete');
       this.setupScene();
       this.setupCamera();
       this.setupRenderer();
@@ -54,6 +57,7 @@ export class ModelViewer {
       this.startRenderLoop();
       
       this.isReady = true;
+      console.log('ModelViewer: Initialization complete');
       this.options.onViewerReady();
       
     } catch (error) {
@@ -74,10 +78,14 @@ export class ModelViewer {
       const script = document.createElement('script');
       script.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r144/three.min.js';
       script.onload = () => {
+        console.log('Three.js core loaded successfully');
         // Load additional modules
         this.loadThreeJSModules().then(resolve).catch(reject);
       };
-      script.onerror = reject;
+      script.onerror = (error) => {
+        console.error('Failed to load Three.js core:', error);
+        reject(error);
+      };
       document.head.appendChild(script);
     });
   }
@@ -87,23 +95,36 @@ export class ModelViewer {
    */
   async loadThreeJSModules() {
     const modules = [
-      'https://cdn.jsdelivr.net/npm/three@0.144.0/examples/js/controls/OrbitControls.js',
-      'https://cdn.jsdelivr.net/npm/three@0.144.0/examples/js/loaders/GLTFLoader.js',
-      'https://cdn.jsdelivr.net/npm/three@0.144.0/examples/js/loaders/OBJLoader.js',
-      'https://cdn.jsdelivr.net/npm/three@0.144.0/examples/js/loaders/PLYLoader.js'
+      {
+        url: 'https://cdn.jsdelivr.net/npm/three@0.144.0/examples/js/controls/OrbitControls.js',
+        name: 'OrbitControls'
+      },
+      {
+        url: 'https://cdn.jsdelivr.net/npm/three@0.144.0/examples/js/loaders/GLTFLoader.js',
+        name: 'GLTFLoader'
+      }
     ];
 
-    const promises = modules.map(src => {
+    const promises = modules.map(module => {
       return new Promise((resolve, reject) => {
         const script = document.createElement('script');
-        script.src = src;
-        script.onload = resolve;
-        script.onerror = reject;
+        script.src = module.url;
+        script.onload = () => {
+          console.log(`Three.js ${module.name} loaded successfully`);
+          resolve();
+        };
+        script.onerror = (error) => {
+          console.error(`Failed to load Three.js ${module.name}:`, error);
+          // Don't reject for optional modules, just log the error
+          console.warn(`${module.name} not available, some features may not work`);
+          resolve(); // Continue loading other modules
+        };
         document.head.appendChild(script);
       });
     });
 
     await Promise.all(promises);
+    console.log('All Three.js modules loaded');
   }
 
   /**
@@ -315,39 +336,56 @@ export class ModelViewer {
    * @returns {Promise} Loading promise
    */
   async loadModel(url, options = {}) {
+    console.log('ModelViewer: loadModel called with URL:', url);
+    
     if (this.isLoading) {
       throw new Error('Another model is currently loading');
+    }
+
+    if (!this.isReady) {
+      throw new Error('Model viewer is not ready yet');
     }
 
     this.isLoading = true;
     this.showLoading(true);
 
     try {
+      console.log('ModelViewer: Starting model load process...');
+      
       // Clear previous model
       if (this.model) {
+        console.log('ModelViewer: Clearing previous model');
         this.clearModel();
       }
 
       // Determine loader based on file extension
+      console.log('ModelViewer: Getting loader for URL');
       const loader = this.getLoaderForUrl(url);
+      console.log('ModelViewer: Loader obtained:', loader.constructor.name);
       
       // Load model
+      console.log('ModelViewer: Loading model with loader...');
       const modelData = await this.loadModelWithLoader(loader, url, options);
+      console.log('ModelViewer: Model data loaded:', modelData);
       
       // Process loaded model
       this.model = modelData;
       this.processLoadedModel(this.model);
+      console.log('ModelViewer: Model processed');
       
       // Add to scene
       this.scene.add(this.model);
+      console.log('ModelViewer: Model added to scene');
       
       // Fit model to view
       this.fitModelToView();
+      console.log('ModelViewer: Model fitted to view');
       
       this.loadedModelUrl = url;
       this.isLoading = false;
       this.showLoading(false);
       
+      console.log('ModelViewer: Model loading completed successfully');
       this.options.onModelLoaded();
       
     } catch (error) {
@@ -370,11 +408,23 @@ export class ModelViewer {
     switch (extension) {
       case 'gltf':
       case 'glb':
-        return new THREE.GLTFLoader();
+        if (window.THREE && THREE.GLTFLoader) {
+          return new THREE.GLTFLoader();
+        } else {
+          throw new Error('GLTFLoader not available - failed to load Three.js modules');
+        }
       case 'obj':
-        return new THREE.OBJLoader();
+        if (window.THREE && THREE.OBJLoader) {
+          return new THREE.OBJLoader();
+        } else {
+          throw new Error('OBJLoader not available');
+        }
       case 'ply':
-        return new THREE.PLYLoader();
+        if (window.THREE && THREE.PLYLoader) {
+          return new THREE.PLYLoader();
+        } else {
+          throw new Error('PLYLoader not available');
+        }
       default:
         throw new Error(`Unsupported model format: ${extension}`);
     }

@@ -373,6 +373,7 @@ export class App {
   async handleProcessComplete(results) {
     try {
       this.log('info', 'Processing completed successfully');
+      console.log('Process completion results:', results);
       this.state.isProcessing = false;
       this.state.results = results;
       
@@ -380,18 +381,43 @@ export class App {
       this.showResultsSection();
       
       // Load model in viewer
-      if (results.modelUrl) {
+      // Backend serves models via /jobs/{job_id}/download endpoint
+      let modelUrl = results.modelUrl; // Check if already provided
+      if (!modelUrl && (results.job_id || this.state.currentJobId)) {
+        const jobId = results.job_id || this.state.currentJobId;
+        modelUrl = `${this.apiClient.options.baseUrl}/jobs/${jobId}/download`;
+        console.log('Constructed model URL:', modelUrl);
+      }
+      
+      console.log('ModelViewer component:', this.components.modelViewer);
+      console.log('ModelViewer loadModel method:', typeof this.components.modelViewer?.loadModel);
+      
+      if (modelUrl) {
+        this.log('info', `Loading 3D model from: ${modelUrl}`);
         if (this.components.modelViewer && typeof this.components.modelViewer.loadModel === 'function') {
-          await this.components.modelViewer.loadModel(results.modelUrl);
-          this.log('info', 'Model loaded in 3D viewer');
+          try {
+            console.log('Attempting to load model...');
+            await this.components.modelViewer.loadModel(modelUrl);
+            this.log('info', 'Model loaded in 3D viewer');
+            console.log('Model loading completed successfully');
+          } catch (modelError) {
+            console.error('Model loading error:', modelError);
+            this.log('error', `Failed to load 3D model: ${modelError.message}`);
+            this.showError('Model Loading Error', `Failed to load 3D model: ${modelError.message}`);
+          }
         } else {
+          console.warn('3D model viewer not available or loadModel method missing');
           this.log('warning', '3D model viewer not available');
         }
+      } else {
+        console.warn('No model URL could be constructed', results);
+        this.log('warning', 'No model URL could be constructed', results);
       }
       
       this.saveState();
       this.showSuccess('Processing Complete', 'Your 3D model has been generated successfully!');
     } catch (error) {
+      console.error('Process completion error:', error);
       this.log('error', `Failed to load results: ${error.message}`);
       this.showError('Results Error', `Processing completed but failed to load results: ${error.message}`);
     }

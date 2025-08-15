@@ -235,7 +235,7 @@ class JobManager:
             # Simulate processing stages
             stages = [
                 "Analyzing images",
-                "Extracting features", 
+                "Extracting features",
                 "Matching features",
                 "Bundle adjustment",
                 "Dense reconstruction",
@@ -244,7 +244,7 @@ class JobManager:
 
             num_stages = len(stages)
             steps_per_stage = 10
-            
+
             for stage_idx, stage_name in enumerate(stages, 1):
                 # Simulate stage processing with fixed steps
                 for step in range(steps_per_stage + 1):
@@ -253,9 +253,11 @@ class JobManager:
 
                     # Calculate stage-specific progress (0-100% for each stage)
                     stage_percentage = (step / steps_per_stage) * 100
-                    
+
                     # Calculate overall job progress for the progress bar
-                    overall_progress = ((stage_idx - 1) + (step / steps_per_stage)) * (100 / num_stages)
+                    overall_progress = ((stage_idx - 1) + (step / steps_per_stage)) * (
+                        100 / num_stages
+                    )
                     job.progress = int(overall_progress)
 
                     message = f"{stage_idx}/{num_stages} {stage_name}... {stage_percentage:.1f}%"

@@ -278,6 +278,9 @@ export class App {
       this.components.modelViewer.clear();
     }
     
+    // Disable model action buttons
+    this.disableModelActionButtons();
+    
     // Update processing button state
     this.updateProcessingButtonState();
     
@@ -447,6 +450,107 @@ export class App {
    */
   handleModelLoaded() {
     this.log('info', 'Model loaded successfully in 3D viewer');
+    
+    // Enable the model action buttons
+    const downloadModelBtn = document.getElementById('downloadModelBtn');
+    const resetViewBtn = document.getElementById('resetViewBtn');
+    
+    if (downloadModelBtn) {
+      downloadModelBtn.disabled = false;
+      this.log('debug', 'Download Model button enabled');
+    }
+    
+    if (resetViewBtn) {
+      resetViewBtn.disabled = false;
+      this.log('debug', 'Reset View button enabled');
+    }
+
+    // Setup button event listeners if not already done
+    this.setupModelActionButtons();
+  }
+
+  /**
+   * Setup event listeners for model action buttons
+   */
+  setupModelActionButtons() {
+    const downloadModelBtn = document.getElementById('downloadModelBtn');
+    const resetViewBtn = document.getElementById('resetViewBtn');
+
+    // Setup download button
+    if (downloadModelBtn && !downloadModelBtn.hasAttribute('data-listener-added')) {
+      downloadModelBtn.addEventListener('click', () => {
+        this.downloadModel();
+      });
+      downloadModelBtn.setAttribute('data-listener-added', 'true');
+      this.log('debug', 'Download Model button event listener added');
+    }
+
+    // Setup reset view button  
+    if (resetViewBtn && !resetViewBtn.hasAttribute('data-listener-added')) {
+      resetViewBtn.addEventListener('click', () => {
+        this.resetModelView();
+      });
+      resetViewBtn.setAttribute('data-listener-added', 'true');
+      this.log('debug', 'Reset View button event listener added');
+    }
+  }
+
+  /**
+   * Download the current model
+   */
+  downloadModel() {
+    if (!this.state.currentJobId) {
+      this.log('warning', 'No model available for download');
+      return;
+    }
+
+    try {
+      const downloadUrl = `${this.apiClient.options.baseUrl}/jobs/${this.state.currentJobId}/download`;
+      this.log('info', `Downloading model from: ${downloadUrl}`);
+      
+      // Create a temporary download link
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = `model_${this.state.currentJobId}.glb`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      this.log('info', 'Model download initiated');
+    } catch (error) {
+      this.log('error', `Failed to download model: ${error.message}`);
+      this.showError('Download Error', `Failed to download model: ${error.message}`);
+    }
+  }
+
+  /**
+   * Reset the 3D model view
+   */
+  resetModelView() {
+    if (this.components.modelViewer && typeof this.components.modelViewer.resetView === 'function') {
+      this.components.modelViewer.resetView();
+      this.log('info', '3D model view reset');
+    } else {
+      this.log('warning', '3D model viewer not available or resetView method missing');
+    }
+  }
+
+  /**
+   * Disable model action buttons
+   */
+  disableModelActionButtons() {
+    const downloadModelBtn = document.getElementById('downloadModelBtn');
+    const resetViewBtn = document.getElementById('resetViewBtn');
+    
+    if (downloadModelBtn) {
+      downloadModelBtn.disabled = true;
+      this.log('debug', 'Download Model button disabled');
+    }
+    
+    if (resetViewBtn) {
+      resetViewBtn.disabled = true;
+      this.log('debug', 'Reset View button disabled');
+    }
   }
 
   /**
@@ -507,6 +611,9 @@ export class App {
     this.state.currentJobId = null;
     this.state.results = null;
     this.components.progressTracker?.reset();
+    
+    // Disable model action buttons when resetting processing
+    this.disableModelActionButtons();
   }
 
   /**

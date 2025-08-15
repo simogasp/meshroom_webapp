@@ -234,32 +234,36 @@ class JobManager:
         try:
             # Simulate processing stages
             stages = [
-                ("Analyzing images", 0, 20),
-                ("Extracting features", 20, 45),
-                ("Matching features", 45, 65),
-                ("Bundle adjustment", 65, 80),
-                ("Dense reconstruction", 80, 95),
-                ("Mesh generation", 95, 100),
+                "Analyzing images",
+                "Extracting features", 
+                "Matching features",
+                "Bundle adjustment",
+                "Dense reconstruction",
+                "Mesh generation",
             ]
 
-            for stage_name, start_progress, end_progress in stages:
-                # Simulate stage processing
-                # nosec B311: Using random for simulation purposes only
-                steps = random.randint(3, 8)
-                for step in range(steps + 1):
+            num_stages = len(stages)
+            steps_per_stage = 10
+            
+            for stage_idx, stage_name in enumerate(stages, 1):
+                # Simulate stage processing with fixed steps
+                for step in range(steps_per_stage + 1):
                     if job.status != JobStatus.PROCESSING:
                         return  # Job was cancelled or failed
 
-                    progress_delta = end_progress - start_progress
-                    progress = start_progress + progress_delta * (step / steps)
-                    job.progress = int(progress)
+                    # Calculate stage-specific progress (0-100% for each stage)
+                    stage_percentage = (step / steps_per_stage) * 100
+                    
+                    # Calculate overall job progress for the progress bar
+                    overall_progress = ((stage_idx - 1) + (step / steps_per_stage)) * (100 / num_stages)
+                    job.progress = int(overall_progress)
 
-                    message = f"{stage_name}... {progress:.1f}%"
+                    message = f"{stage_idx}/{num_stages} {stage_name}... {stage_percentage:.1f}%"
                     await self._send_progress_update(job_id, job.progress, message)
 
-                    # Random delay to simulate processing time
+                    # Shorter delay for faster simulation
                     # nosec B311: Using random for simulation timing only
-                    delay = random.uniform(0.5, 2.0)
+                    delay = random.uniform(0.05, 0.5)
                     await asyncio.sleep(delay)
 
             # Complete the job - update status FIRST before sending message

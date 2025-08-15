@@ -1,26 +1,29 @@
 /**
  * File Manager Module
- * Handles file upload, drag-and-drop, preview, and validation
+ * Handles multiple file upload, drag-and-drop, preview, and validation
  * @module FileManager
  */
 
 /**
  * File Manager Class
- * Manages file upload interface and file operations
+ * Manages multiple file upload interface and file operations
  */
-export class FileManager {
+class FileManager {
   constructor(options = {}) {
     this.options = {
-      maxFileSize: 100 * 1024 * 1024, // 100MB
+      maxFileSize: 100 * 1024 * 1024, // 100MB per file
+      maxFiles: 50, // Maximum number of files
       allowedTypes: ['image/jpeg', 'image/png', 'image/tiff', 'image/webp'],
-      onFileSelected: () => {},
+      onFilesSelected: () => {},
       onFileRemoved: () => {},
+      onFilesCleared: () => {},
       onError: () => {},
       ...options
     };
 
-    this.currentFile = null;
-    this.previewUrl = null;
+    this.selectedFiles = [];
+    this.fileMap = new Map(); // Map to track files by unique ID
+    this.fileCounter = 0;
     
     this.init();
   }
@@ -31,6 +34,9 @@ export class FileManager {
   init() {
     this.setupElements();
     this.setupEventListeners();
+    
+    // Make fileManager globally accessible for onclick handlers
+    window.fileManager = this;
   }
 
   /**
@@ -39,13 +45,13 @@ export class FileManager {
   setupElements() {
     this.uploadArea = document.getElementById('uploadArea');
     this.fileInput = document.getElementById('fileInput');
+    this.selectFilesBtn = document.getElementById('selectFilesBtn');
     this.uploadText = document.getElementById('uploadText');
     this.uploadSubtext = document.getElementById('uploadSubtext');
-    this.filePreview = document.getElementById('filePreview');
-    this.previewImage = document.getElementById('previewImage');
-    this.fileName = document.getElementById('fileName');
-    this.fileSize = document.getElementById('fileSize');
-    this.removeFileBtn = document.getElementById('removeFile');
+    this.imagePreview = document.getElementById('imagePreview');
+    this.previewGrid = document.getElementById('previewGrid');
+    this.imageCount = document.getElementById('imageCount');
+    this.clearAllBtn = document.getElementById('clearAllBtn');
 
     if (!this.uploadArea) {
       throw new Error('Upload area element not found');
@@ -56,108 +62,139 @@ export class FileManager {
    * Setup event listeners
    */
   setupEventListeners() {
-    // Click to upload
-    this.uploadArea.addEventListener('click', () => {
-      if (!this.currentFile) {
-        this.openFileDialog();
-      }
-    });
-
     // File input change
     if (this.fileInput) {
       this.fileInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file) {
-          this.handleFileSelection(file);
-        }
+        this.handleFileSelect(e.target.files);
       });
     }
 
-    // Drag and drop
-    this.uploadArea.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      this.uploadArea.classList.add('dragover');
-    });
-
-    this.uploadArea.addEventListener('dragleave', (e) => {
-      e.preventDefault();
-      if (!this.uploadArea.contains(e.relatedTarget)) {
-        this.uploadArea.classList.remove('dragover');
-      }
-    });
-
-    this.uploadArea.addEventListener('drop', (e) => {
-      e.preventDefault();
-      this.uploadArea.classList.remove('dragover');
-      
-      const files = Array.from(e.dataTransfer.files);
-      if (files.length > 0) {
-        this.handleFileSelection(files[0]);
-      }
-    });
-
-    // Remove file button
-    if (this.removeFileBtn) {
-      this.removeFileBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        this.removeFile();
+    // Select files button
+    if (this.selectFilesBtn) {
+      this.selectFilesBtn.addEventListener('click', () => {
+        this.fileInput?.click();
       });
+    }
+
+    // Drag and drop events
+    if (this.uploadArea) {
+      this.uploadArea.addEventListener('dragover', (e) => this.handleDragOver(e));
+      this.uploadArea.addEventListener('dragleave', (e) => this.handleDragLeave(e));
+      this.uploadArea.addEventListener('drop', (e) => this.handleDrop(e));
+    }
+
+    // Clear all button
+    if (this.clearAllBtn) {
+      this.clearAllBtn.addEventListener('click', () => this.clearAllFiles());
     }
 
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'o') {
         e.preventDefault();
-        this.openFileDialog();
+        this.fileInput?.click();
       }
     });
   }
 
   /**
-   * Open file dialog
+   * Handle drag over event
+   * @param {DragEvent} e - Drag event
    */
-  openFileDialog() {
-    if (this.fileInput) {
-      this.fileInput.click();
+  handleDragOver(e) {
+    e.preventDefault();
+    this.uploadArea.classList.add('dragover');
+  }
+
+  /**
+   * Handle drag leave event
+   * @param {DragEvent} e - Drag event
+   */
+  handleDragLeave(e) {
+    e.preventDefault();
+    if (!this.uploadArea.contains(e.relatedTarget)) {
+      this.uploadArea.classList.remove('dragover');
     }
   }
 
   /**
-   * Handle file selection
-   * @param {File} file - Selected file
+   * Handle drop event
+   * @param {DragEvent} e - Drop event
    */
-  async handleFileSelection(file) {
-    try {
-      // Validate file
+  handleDrop(e) {
+    e.preventDefault();
+    this.uploadArea.classList.remove('dragover');
+    
+    const files = Array.from(e.dataTransfer.files);
+    this.handleFileSelect(files);
+  }
+
+  /**
+   * Handle file selection (from input or drop)
+   * @param {FileList|Array} files - Selected files
+   */
+  handleFileSelect(files) {
+    const fileArray = Array.from(files);
+    
+    if (fileArray.length === 0) {
+      return;
+    }
+
+    // Check total file limit
+    if (this.selectedFiles.length + fileArray.length > this.options.maxFiles) {
+      this.options.onError({
+        type: 'file_limit',
+        message: `Maximum ${this.options.maxFiles} files allowed. Currently have ${this.selectedFiles.length} files.`
+      });
+      return;
+    }
+
+    const validFiles = [];
+    const errors = [];
+
+    // Validate each file
+    fileArray.forEach(file => {
       const validation = this.validateFile(file);
-      if (!validation.valid) {
-        throw new Error(validation.error);
+      if (validation.valid) {
+        // Check for duplicates by name and size
+        const isDuplicate = this.selectedFiles.some(existingFile => 
+          existingFile.name === file.name && existingFile.size === file.size
+        );
+        
+        if (!isDuplicate) {
+          validFiles.push(file);
+        } else {
+          errors.push(`File "${file.name}" is already selected`);
+        }
+      } else {
+        errors.push(`${file.name}: ${validation.error}`);
       }
+    });
 
-      // Remove previous file
-      if (this.currentFile) {
-        this.removeFile();
-      }
+    // Show errors if any
+    if (errors.length > 0) {
+      this.options.onError({
+        type: 'validation_errors',
+        message: `Some files were rejected:`,
+        details: errors
+      });
+    }
 
-      this.currentFile = file;
+    // Add valid files
+    if (validFiles.length > 0) {
+      validFiles.forEach(file => this.addFile(file));
+      this.updateUI();
+      this.options.onFilesSelected(this.selectedFiles);
+    }
 
-      // Show preview
-      await this.showPreview(file);
-
-      // Update UI
-      this.updateUploadAreaState();
-
-      // Notify parent
-      this.options.onFileSelected(file);
-
-    } catch (error) {
-      this.options.onError(error);
-      this.showError(error.message);
+    // Reset file input
+    if (this.fileInput) {
+      this.fileInput.value = '';
     }
   }
 
   /**
-   * Validate file
+   * Validate a single file
    * @param {File} file - File to validate
    * @returns {Object} Validation result
    */
@@ -166,7 +203,7 @@ export class FileManager {
     if (!this.options.allowedTypes.includes(file.type)) {
       return {
         valid: false,
-        error: `Unsupported file type: ${file.type}. Supported types: ${this.options.allowedTypes.join(', ')}`
+        error: `Invalid file type. Allowed: ${this.options.allowedTypes.join(', ')}`
       };
     }
 
@@ -174,7 +211,7 @@ export class FileManager {
     if (file.size > this.options.maxFileSize) {
       return {
         valid: false,
-        error: `File too large: ${this.formatFileSize(file.size)}. Maximum size: ${this.formatFileSize(this.options.maxFileSize)}`
+        error: `File too large. Max size: ${this.formatFileSize(this.options.maxFileSize)}`
       };
     }
 
@@ -190,249 +227,318 @@ export class FileManager {
   }
 
   /**
-   * Show file preview
-   * @param {File} file - File to preview
+   * Add a file to the selection
+   * @param {File} file - File to add
    */
-  async showPreview(file) {
-    return new Promise((resolve, reject) => {
-      // Clean up previous preview
-      if (this.previewUrl) {
-        URL.revokeObjectURL(this.previewUrl);
+  addFile(file) {
+    const fileId = `file_${++this.fileCounter}_${Date.now()}`;
+    
+    const fileData = {
+      id: fileId,
+      file: file,
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      lastModified: file.lastModified,
+      previewUrl: null,
+      metadata: null
+    };
+
+    this.selectedFiles.push(fileData);
+    this.fileMap.set(fileId, fileData);
+
+    // Create preview for image files
+    this.createPreview(fileData);
+  }
+
+  /**
+   * Remove a file from selection
+   * @param {string} fileId - File ID to remove
+   */
+  removeFile(fileId) {
+    const fileData = this.fileMap.get(fileId);
+    if (!fileData) return;
+
+    // Remove from arrays and map
+    this.selectedFiles = this.selectedFiles.filter(f => f.id !== fileId);
+    this.fileMap.delete(fileId);
+
+    // Clean up preview URL
+    if (fileData.previewUrl) {
+      URL.revokeObjectURL(fileData.previewUrl);
+    }
+
+    // Remove from DOM
+    const previewElement = document.getElementById(`preview-${fileId}`);
+    if (previewElement) {
+      previewElement.remove();
+    }
+
+    this.updateUI();
+    this.options.onFileRemoved(fileData);
+    this.options.onFilesSelected(this.selectedFiles);
+  }
+
+  /**
+   * Clear all files
+   */
+  clearAllFiles() {
+    // Clean up preview URLs
+    this.selectedFiles.forEach(fileData => {
+      if (fileData.previewUrl) {
+        URL.revokeObjectURL(fileData.previewUrl);
       }
+    });
 
-      // Create new preview URL
-      this.previewUrl = URL.createObjectURL(file);
+    // Clear data structures
+    this.selectedFiles = [];
+    this.fileMap.clear();
 
-      // Load image
+    // Clear DOM
+    if (this.previewGrid) {
+      this.previewGrid.innerHTML = '';
+    }
+
+    this.updateUI();
+    this.options.onFilesCleared();
+    this.options.onFilesSelected(this.selectedFiles);
+  }
+
+  /**
+   * Create preview for a file
+   * @param {Object} fileData - File data object
+   */
+  createPreview(fileData) {
+    if (!fileData.file.type.startsWith('image/')) {
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      fileData.previewUrl = e.target.result;
+      this.extractImageMetadata(fileData).then(() => {
+        this.renderPreview(fileData);
+      });
+    };
+    reader.readAsDataURL(fileData.file);
+  }
+
+  /**
+   * Extract image metadata
+   * @param {Object} fileData - File data object
+   * @returns {Promise} Promise that resolves when metadata is extracted
+   */
+  extractImageMetadata(fileData) {
+    return new Promise((resolve) => {
       const img = new Image();
       img.onload = () => {
-        // Update preview elements
-        if (this.previewImage) {
-          this.previewImage.src = this.previewUrl;
-          this.previewImage.alt = file.name;
-        }
-
-        if (this.fileName) {
-          this.fileName.textContent = file.name;
-        }
-
-        if (this.fileSize) {
-          this.fileSize.textContent = this.formatFileSize(file.size);
-        }
-
-        // Show preview container
-        if (this.filePreview) {
-          this.filePreview.classList.remove('hidden');
-        }
-
-        // Update image dimensions info
-        this.updateImageInfo(img.naturalWidth, img.naturalHeight);
-
+        fileData.metadata = {
+          width: img.naturalWidth,
+          height: img.naturalHeight,
+          aspectRatio: (img.naturalWidth / img.naturalHeight).toFixed(2),
+          megapixels: ((img.naturalWidth * img.naturalHeight) / 1000000).toFixed(1)
+        };
         resolve();
       };
-
       img.onerror = () => {
-        reject(new Error('Failed to load image preview'));
+        fileData.metadata = { error: 'Failed to load image' };
+        resolve();
       };
-
-      img.src = this.previewUrl;
+      img.src = fileData.previewUrl;
     });
   }
 
   /**
-   * Update image information display
-   * @param {number} width - Image width
-   * @param {number} height - Image height
+   * Render preview in the grid
+   * @param {Object} fileData - File data object
    */
-  updateImageInfo(width, height) {
-    const imageInfo = document.getElementById('imageInfo');
-    if (imageInfo) {
-      imageInfo.innerHTML = `
-        <div class="image-dimensions">
-          <span class="dimension-label">Dimensions:</span>
-          <span class="dimension-value">${width} × ${height} pixels</span>
+  renderPreview(fileData) {
+    if (!this.previewGrid) return;
+
+    const previewElement = document.createElement('div');
+    previewElement.className = 'preview-item';
+    previewElement.id = `preview-${fileData.id}`;
+    
+    const metadataHtml = fileData.metadata && !fileData.metadata.error 
+      ? `<div class="file-meta">${fileData.metadata.width}×${fileData.metadata.height}</div>`
+      : '';
+
+    previewElement.innerHTML = `
+      <img src="${fileData.previewUrl}" alt="${fileData.name}" class="preview-image">
+      <div class="preview-overlay">
+        <div class="preview-info">
+          <div class="file-name" title="${fileData.name}">${this.truncateFileName(fileData.name)}</div>
+          <div class="file-size">${this.formatFileSize(fileData.size)}</div>
+          ${metadataHtml}
         </div>
-        <div class="image-aspect">
-          <span class="aspect-label">Aspect Ratio:</span>
-          <span class="aspect-value">${this.calculateAspectRatio(width, height)}</span>
-        </div>
-      `;
-      imageInfo.classList.remove('hidden');
-    }
+        <button class="preview-remove" onclick="window.fileManager?.removeFile('${fileData.id}')" title="Remove file">
+          ×
+        </button>
+      </div>
+    `;
+
+    this.previewGrid.appendChild(previewElement);
   }
 
   /**
-   * Calculate aspect ratio
-   * @param {number} width - Image width
-   * @param {number} height - Image height
-   * @returns {string} Aspect ratio string
+   * Update UI state
    */
-  calculateAspectRatio(width, height) {
-    const gcd = (a, b) => b === 0 ? a : gcd(b, a % b);
-    const divisor = gcd(width, height);
-    const ratioW = width / divisor;
-    const ratioH = height / divisor;
+  updateUI() {
+    const fileCount = this.selectedFiles.length;
     
-    // Common ratios
-    const commonRatios = {
-      '16:9': 16/9,
-      '4:3': 4/3,
-      '3:2': 3/2,
-      '1:1': 1/1,
-      '2:3': 2/3,
-      '3:4': 3/4,
-      '9:16': 9/16
-    };
-    
-    const actualRatio = width / height;
-    
-    for (const [name, ratio] of Object.entries(commonRatios)) {
-      if (Math.abs(actualRatio - ratio) < 0.01) {
-        return name;
-      }
+    // Update file count
+    if (this.imageCount) {
+      this.imageCount.textContent = fileCount;
     }
-    
-    return `${ratioW}:${ratioH}`;
-  }
 
-  /**
-   * Remove current file
-   */
-  removeFile() {
-    if (this.currentFile) {
-      // Clean up preview URL
-      if (this.previewUrl) {
-        URL.revokeObjectURL(this.previewUrl);
-        this.previewUrl = null;
-      }
-
-      // Reset file input
-      if (this.fileInput) {
-        this.fileInput.value = '';
-      }
-
-      // Hide preview
-      if (this.filePreview) {
-        this.filePreview.classList.add('hidden');
-      }
-
-      // Hide image info
-      const imageInfo = document.getElementById('imageInfo');
-      if (imageInfo) {
-        imageInfo.classList.add('hidden');
-      }
-
-      // Reset state
-      this.currentFile = null;
-      this.updateUploadAreaState();
-
-      // Notify parent
-      this.options.onFileRemoved();
+    // Show/hide preview container
+    if (this.imagePreview) {
+      this.imagePreview.classList.toggle('hidden', fileCount === 0);
     }
-  }
 
-  /**
-   * Update upload area visual state
-   */
-  updateUploadAreaState() {
-    if (!this.uploadArea) return;
-
-    if (this.currentFile) {
-      this.uploadArea.classList.add('has-file');
-      
+    // Update upload area text
+    if (fileCount === 0) {
       if (this.uploadText) {
-        this.uploadText.textContent = 'File uploaded successfully';
-      }
-      
-      if (this.uploadSubtext) {
-        this.uploadSubtext.textContent = 'Click or drag another file to replace';
+        this.uploadText.innerHTML = `
+          <strong>Drag and drop your images here</strong>
+          <br>or
+        `;
       }
     } else {
-      this.uploadArea.classList.remove('has-file');
-      
       if (this.uploadText) {
-        this.uploadText.textContent = 'Drop your image here or click to browse';
+        this.uploadText.innerHTML = `
+          <strong>${fileCount} image${fileCount !== 1 ? 's' : ''} selected</strong>
+          <br>Add more files or
+        `;
       }
-      
-      if (this.uploadSubtext) {
-        this.uploadSubtext.textContent = 'Supports JPEG, PNG, TIFF, WebP (max 100MB)';
-      }
+    }
+
+    // Update button text
+    if (this.selectFilesBtn) {
+      this.selectFilesBtn.textContent = fileCount === 0 ? 'Select Files' : 'Add More Files';
+    }
+
+    // Update subtext
+    if (this.uploadSubtext) {
+      this.uploadSubtext.textContent = fileCount === 0 
+        ? 'Supports JPEG, PNG, TIFF, WebP formats. Max 100MB per file.'
+        : `Total: ${this.formatFileSize(this.getTotalSize())} • ${this.options.maxFiles - fileCount} more allowed`;
     }
   }
 
   /**
-   * Show error message
-   * @param {string} message - Error message
-   */
-  showError(message) {
-    // Create temporary error display
-    const errorDiv = document.createElement('div');
-    errorDiv.className = 'upload-error';
-    errorDiv.textContent = message;
-    
-    // Insert into upload area
-    if (this.uploadArea) {
-      this.uploadArea.appendChild(errorDiv);
-      
-      // Remove after 5 seconds
-      setTimeout(() => {
-        if (errorDiv.parentNode) {
-          errorDiv.parentNode.removeChild(errorDiv);
-        }
-      }, 5000);
-    }
-  }
-
-  /**
-   * Format file size
-   * @param {number} bytes - Size in bytes
+   * Format file size for display
+   * @param {number} bytes - File size in bytes
    * @returns {string} Formatted size
    */
   formatFileSize(bytes) {
-    const units = ['B', 'KB', 'MB', 'GB'];
-    let size = bytes;
-    let unitIndex = 0;
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }
+
+  /**
+   * Truncate long file names
+   * @param {string} fileName - Original file name
+   * @param {number} maxLength - Maximum length
+   * @returns {string} Truncated file name
+   */
+  truncateFileName(fileName, maxLength = 20) {
+    if (fileName.length <= maxLength) return fileName;
     
-    while (size >= 1024 && unitIndex < units.length - 1) {
-      size /= 1024;
-      unitIndex++;
-    }
+    const extension = fileName.split('.').pop();
+    const nameWithoutExt = fileName.substring(0, fileName.length - extension.length - 1);
+    const truncated = nameWithoutExt.substring(0, maxLength - extension.length - 4) + '...';
     
-    return `${size.toFixed(1)} ${units[unitIndex]}`;
+    return `${truncated}.${extension}`;
   }
 
   /**
-   * Get current file
-   * @returns {File|null} Current file
+   * Get selected files
+   * @returns {Array} Array of file data objects
    */
-  getCurrentFile() {
-    return this.currentFile;
+  getSelectedFiles() {
+    return [...this.selectedFiles];
   }
 
   /**
-   * Check if file is selected
-   * @returns {boolean} Whether file is selected
+   * Get selected files as File objects
+   * @returns {Array} Array of File objects
    */
-  hasFile() {
-    return !!this.currentFile;
+  getSelectedFileObjects() {
+    return this.selectedFiles.map(fileData => fileData.file);
   }
 
   /**
-   * Get file preview URL
-   * @returns {string|null} Preview URL
+   * Check if files are selected
+   * @returns {boolean} True if files are selected
    */
-  getPreviewUrl() {
-    return this.previewUrl;
+  hasFiles() {
+    return this.selectedFiles.length > 0;
   }
 
   /**
-   * Cleanup resources
+   * Get file count
+   * @returns {number} Number of selected files
    */
-  destroy() {
-    if (this.previewUrl) {
-      URL.revokeObjectURL(this.previewUrl);
+  getFileCount() {
+    return this.selectedFiles.length;
+  }
+
+  /**
+   * Get total file size
+   * @returns {number} Total size in bytes
+   */
+  getTotalSize() {
+    return this.selectedFiles.reduce((total, fileData) => total + fileData.size, 0);
+  }
+
+  /**
+   * Get file by ID
+   * @param {string} fileId - File ID
+   * @returns {Object|null} File data or null
+   */
+  getFileById(fileId) {
+    return this.fileMap.get(fileId) || null;
+  }
+
+  /**
+   * Get summary statistics
+   * @returns {Object} File statistics
+   */
+  getStatistics() {
+    return {
+      count: this.selectedFiles.length,
+      totalSize: this.getTotalSize(),
+      averageSize: this.selectedFiles.length > 0 ? this.getTotalSize() / this.selectedFiles.length : 0,
+      types: [...new Set(this.selectedFiles.map(f => f.type))],
+      maxFiles: this.options.maxFiles,
+      remainingSlots: this.options.maxFiles - this.selectedFiles.length
+    };
+  }
+
+  /**
+   * Dispose of file manager resources
+   */
+  dispose() {
+    // Clean up preview URLs
+    this.selectedFiles.forEach(fileData => {
+      if (fileData.previewUrl) {
+        URL.revokeObjectURL(fileData.previewUrl);
+      }
+    });
+
+    // Clear data
+    this.selectedFiles = [];
+    this.fileMap.clear();
+
+    // Remove global reference
+    if (window.fileManager === this) {
+      delete window.fileManager;
     }
-    this.currentFile = null;
-    this.previewUrl = null;
   }
 }
+
+export default FileManager;

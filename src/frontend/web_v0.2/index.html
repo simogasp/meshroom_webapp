@@ -52,39 +52,26 @@
                         <div class="dropzone-content">
                             <div class="dropzone-icon">📁</div>
                             <p id="uploadText" class="dropzone-text">
-                                <strong>Drag and drop your image here</strong>
+                                <strong>Drag and drop your images here</strong>
                                 <br>or
                             </p>
                             <button id="selectFilesBtn" class="btn btn-primary">
-                                Select File
+                                Select Files
                             </button>
-                            <input type="file" id="fileInput" accept="image/*" hidden>
+                            <input type="file" id="fileInput" accept="image/*" multiple hidden>
                             <p id="uploadSubtext" class="dropzone-hint">
-                                Supports JPEG, PNG, TIFF, WebP formats. Max 100MB.
+                                Supports JPEG, PNG, TIFF, WebP formats. Max 100MB per file.
                             </p>
                         </div>
                         
-                        <!-- File Preview -->
-                        <div id="filePreview" class="file-preview hidden">
-                            <img id="previewImage" class="preview-image" alt="File preview">
-                            <div class="file-info">
-                                <div class="file-details">
-                                    <span id="fileName" class="file-name"></span>
-                                    <span id="fileSize" class="file-size"></span>
-                                </div>
-                                <div id="imageInfo" class="image-info hidden"></div>
-                                <button id="removeFile" class="btn btn-danger btn-small">Remove</button>
+                        <!-- Image Preview Grid -->
+                        <div id="imagePreview" class="image-preview-container hidden">
+                            <div class="preview-header">
+                                <h3>Selected Images (<span id="imageCount">0</span>)</h3>
+                                <button id="clearAllBtn" class="btn btn-secondary">Clear All</button>
                             </div>
+                            <div id="previewGrid" class="preview-grid"></div>
                         </div>
-                    </div>
-
-                    <!-- Image Preview Grid -->
-                    <div id="imagePreview" class="image-preview-container hidden">
-                        <div class="preview-header">
-                            <h3>Selected Images (<span id="imageCount">0</span>)</h3>
-                            <button id="clearAllBtn" class="btn btn-secondary">Clear All</button>
-                        </div>
-                        <div id="previewGrid" class="preview-grid"></div>
                     </div>
                 </div>
             </section>

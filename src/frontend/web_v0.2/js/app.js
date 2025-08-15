@@ -1,10 +1,22 @@
 /**
  * Main Application Module
- * Coordinates all frontend components and manages application state
+ * Coordinates all frontend components and manages      onViewerReady: () => this.handleViewerReady(),
+      onModelLoad: (modelData) => this.handleModelLoad(modelData)
+    });
+
+    // Initialize LogPanel
+    this.components.logPanel = new LogPanel({
+      maxEntries: 1000,
+      enableExport: true
+    });
+
+    // Initialize Modal
+    this.components.modal = new Modal();
+  }tate
  * @module App
  */
 
-import { FileManager } from './fileManager.js';
+import FileManager from './fileManager.js';
 import { ParameterPanel } from './parameterPanel.js';
 import { ProgressTracker } from './progressTracker.js';
 import { ModelViewer } from './modelViewer.js';
@@ -20,6 +32,7 @@ export class App {
   constructor() {
     this.state = {
       currentFile: null,
+      selectedFiles: [],
       isProcessing: false,
       currentJobId: null,
       parameters: {},
@@ -51,11 +64,17 @@ export class App {
    * Initialize all components
    */
   initializeComponents() {
+    console.log('Initializing components...');
+    
     // Initialize FileManager
+    console.log('Creating FileManager...');
     this.components.fileManager = new FileManager({
-      onFileSelected: (file) => this.handleFileSelected(file),
-      onFileRemoved: () => this.handleFileRemoved()
+      onFilesSelected: (files) => this.handleFilesSelected(files),
+      onFileRemoved: (fileData) => this.handleFileRemoved(fileData),
+      onFilesCleared: () => this.handleFilesCleared(),
+      onError: (error) => this.handleFileError(error)
     });
+    console.log('FileManager created successfully');
 
     // Initialize ParameterPanel
     this.components.parameterPanel = new ParameterPanel({
@@ -96,7 +115,9 @@ export class App {
         switch (e.key.toLowerCase()) {
           case 'o':
             e.preventDefault();
-            this.components.fileManager.openFileDialog();
+            // Trigger file input click
+            const fileInput = document.getElementById('fileInput');
+            if (fileInput) fileInput.click();
             break;
           case 's':
             e.preventDefault();
@@ -147,35 +168,40 @@ export class App {
   }
 
   /**
-   * Handle file selection
-   * @param {File} file - Selected file
+   * Handle files selection (multiple files)
+   * @param {Array} files - Array of selected file data objects
    */
-  async handleFileSelected(file) {
+  async handleFilesSelected(files) {
     try {
-      this.log('info', `File selected: ${file.name} (${this.formatFileSize(file.size)})`);
+      this.log('info', `${files.length} file${files.length !== 1 ? 's' : ''} selected`);
       
-      // Validate file
-      const validation = this.validateFile(file);
-      if (!validation.valid) {
-        throw new Error(validation.error);
-      }
+      // For now, we'll work with the first file for processing
+      // Future versions can support multi-file processing
+      if (files.length > 0) {
+        const firstFile = files[0].file; // Get the File object from fileData
+        this.log('info', `Primary file: ${firstFile.name} (${this.formatFileSize(firstFile.size)})`);
+        
+        // Validate file
+        const validation = this.validateFile(firstFile);
+        if (!validation.valid) {
+          throw new Error(validation.error);
+        }
 
-      this.state.currentFile = file;
-      
-      // Show file preview
-      await this.components.fileManager.showPreview(file);
-      
-      // Reset previous state
-      this.resetProcessingState();
-      
-      // Enable parameter panel
-      this.components.parameterPanel.setEnabled(true);
-      
-      // Load default parameters based on file type
-      const defaultParams = this.getDefaultParameters(file);
-      this.components.parameterPanel.setParameters(defaultParams);
-      
-      this.saveState();
+        this.state.currentFile = firstFile;
+        this.state.selectedFiles = files; // Store all selected files
+        
+        // Reset previous state
+        this.resetProcessingState();
+        
+        // Enable parameter panel (temporarily disabled)
+        // this.components.parameterPanel?.setEnabled(true);
+        
+        // Load default parameters based on file type
+        const defaultParams = this.getDefaultParameters(firstFile);
+        // this.components.parameterPanel?.setParameters(defaultParams);
+        
+        this.saveState();
+      }
     } catch (error) {
       this.log('error', `File selection failed: ${error.message}`);
       this.showError('File Selection Error', error.message);
@@ -183,15 +209,56 @@ export class App {
   }
 
   /**
-   * Handle file removal
+   * Handle single file removal
+   * @param {Object} fileData - Removed file data
    */
-  handleFileRemoved() {
-    this.log('info', 'File removed');
+  handleFileRemoved(fileData) {
+    this.log('info', `File removed: ${fileData.name}`);
+    
+    // If the removed file was the current processing file, update state
+    if (this.state.currentFile && this.state.currentFile.name === fileData.name) {
+      const remainingFiles = this.components.fileManager.getSelectedFiles();
+      if (remainingFiles.length > 0) {
+        // Set new primary file
+        this.state.currentFile = remainingFiles[0].file;
+        this.log('info', `New primary file: ${this.state.currentFile.name}`);
+      } else {
+        // No files left
+        this.handleFilesCleared();
+        return;
+      }
+    }
+    
+    this.state.selectedFiles = this.components.fileManager.getSelectedFiles();
+    this.saveState();
+  }
+
+  /**
+   * Handle all files cleared
+   */
+  handleFilesCleared() {
+    this.log('info', 'All files removed');
     this.state.currentFile = null;
+    this.state.selectedFiles = [];
     this.resetProcessingState();
     this.components.parameterPanel.setEnabled(false);
     this.components.modelViewer.clear();
     this.saveState();
+  }
+
+  /**
+   * Handle file-related errors
+   * @param {Object} error - Error information
+   */
+  handleFileError(error) {
+    this.log('error', `File error: ${error.message}`);
+    
+    let errorMessage = error.message;
+    if (error.details && error.details.length > 0) {
+      errorMessage += '\n\nDetails:\n' + error.details.join('\n');
+    }
+    
+    this.showError('File Error', errorMessage);
   }
 
   /**
@@ -352,7 +419,7 @@ export class App {
     this.state.isProcessing = false;
     this.state.currentJobId = null;
     this.state.results = null;
-    this.components.progressTracker.reset();
+    this.components.progressTracker?.reset();
   }
 
   /**
@@ -399,15 +466,10 @@ export class App {
    */
   showError(title, message) {
     this.components.modal.showModal({
-      title,
-      content: `<p class="text-danger-600">${message}</p>`,
-      actions: [
-        {
-          text: 'OK',
-          variant: 'secondary',
-          action: () => this.components.modal.closeModal()
-        }
-      ]
+      type: 'error',
+      title: title,
+      message: message,
+      buttons: ['OK']
     });
   }
 
@@ -420,10 +482,8 @@ export class App {
   log(level, message, data = null) {
     this.components.logPanel?.addEntry(level, message, data);
     
-    // Also log to console in development
-    if (process?.env?.NODE_ENV === 'development') {
-      console[level](message, data);
-    }
+    // Log to console in the meantime
+    console[level](message, data);
   }
 
   /**
@@ -473,5 +533,7 @@ export class App {
 
 // Auto-initialize application when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
+  console.log('DOM content loaded - initializing app...');
   window.meshroomApp = new App();
+  console.log('App initialization complete');
 });

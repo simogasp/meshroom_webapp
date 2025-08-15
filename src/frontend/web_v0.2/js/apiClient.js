@@ -246,7 +246,7 @@ export class ApiClient {
    * @returns {Promise<Object>} Job status
    */
   async getJobStatus(jobId) {
-    return await this.request(`/jobs/${jobId}/status`);
+    return await this.request(`/jobs/${jobId}`);
   }
 
   /**

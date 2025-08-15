@@ -11,72 +11,30 @@
 export class ProgressTracker {
   constructor(options = {}) {
     this.options = {
-      wsUrl: 'ws://localhost:8000/ws',
-      pollInterval: 5000, // 5 seconds fallback polling
+      updateInterval: 100,
+      smoothingFactor: 0.1,
       onProgressUpdate: () => {},
-      onProcessComplete: () => {},
-      onProcessError: () => {},
+      onCompletion: () => {},
+      onError: () => {},
       onConnectionStatusChange: () => {},
       ...options
     };
 
-    this.jobId = null;
-    this.isTracking = false;
-    this.websocket = null;
-    this.pollTimer = null;
-    this.connectionStatus = 'disconnected';
+    this.apiClient = options.apiClient;
+    this.progressData = {};
+    this.startTime = null;
+    this.lastProgressTime = null;
+    this.velocityHistory = [];
     
-    this.progressData = {
-      overall: 0,
-      stage: 'idle',
-      stageProgress: 0,
-      message: '',
-      stages: [],
-      estimatedTimeRemaining: null,
-      startTime: null,
-      lastUpdate: null
-    };
-
-    this.stages = [
-      {
-        id: 'upload',
-        name: 'File Upload',
-        description: 'Uploading and validating input file',
-        weight: 5
-      },
-      {
-        id: 'preprocessing',
-        name: 'Preprocessing',
-        description: 'Analyzing and preparing image data',
-        weight: 15
-      },
-      {
-        id: 'depth_estimation',
-        name: 'Depth Estimation',
-        description: 'Calculating depth information from image',
-        weight: 30
-      },
-      {
-        id: 'mesh_generation',
-        name: 'Mesh Generation',
-        description: 'Creating 3D geometry from depth data',
-        weight: 25
-      },
-      {
-        id: 'texture_mapping',
-        name: 'Texture Mapping',
-        description: 'Applying textures to 3D model',
-        weight: 15
-      },
-      {
-        id: 'optimization',
-        name: 'Optimization',
-        description: 'Optimizing model for output format',
-        weight: 10
-      }
-    ];
-
-    this.init();
+    // Get DOM elements
+    this.progressBar = document.getElementById('progressBar');
+    this.progressText = document.getElementById('progressText');
+    this.progressMessage = document.getElementById('progressMessage');
+    this.timeRemaining = document.getElementById('timeRemaining');
+    this.estimatedCompletion = document.getElementById('estimatedCompletion');
+    this.stageContainer = document.getElementById('stageProgressContainer');
+    
+    // Initialize UI - simplified initialization since DOM elements are already set
   }
 
   /**
@@ -185,7 +143,11 @@ export class ProgressTracker {
    */
   connectWebSocket() {
     try {
-      const wsUrl = `${this.options.wsUrl}/${this.jobId}`;
+      // Use API client to get the correct WebSocket URL
+      const baseWsUrl = this.apiClient ? 
+        this.apiClient.options.baseUrl.replace('http://', 'ws://').replace('https://', 'wss://') + '/ws' :
+        'ws://localhost:8000/ws';
+      const wsUrl = `${baseWsUrl}/${this.jobId}`;
       this.websocket = new WebSocket(wsUrl);
 
       this.websocket.onopen = () => {
@@ -247,13 +209,12 @@ export class ProgressTracker {
    */
   async pollProgress() {
     try {
-      const response = await fetch(`/jobs/${this.jobId}`);
-      if (response.ok) {
-        const data = await response.json();
-        this.handleProgressUpdate(data);
-      } else {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      if (!this.apiClient) {
+        throw new Error('API client not available');
       }
+      
+      const data = await this.apiClient.getJobStatus(this.jobId);
+      this.handleProgressUpdate(data);
     } catch (error) {
       this.log('error', 'Failed to poll progress', error);
     }
@@ -270,6 +231,14 @@ export class ProgressTracker {
       lastUpdate: Date.now()
     };
 
+    // Parse stage information from message if available
+    if (data.message) {
+      const stageInfo = this.parseStageMessage(data.message);
+      if (stageInfo) {
+        this.updateDynamicStageProgress(stageInfo);
+      }
+    }
+
     // Calculate time estimates
     this.calculateTimeEstimates();
 
@@ -285,6 +254,94 @@ export class ProgressTracker {
       // Notify of progress update
       this.options.onProgressUpdate(this.progressData);
     }
+  }
+
+  /**
+   * Parse stage information from progress message
+   * @param {string} message - Progress message in format "1/6 Stage name... 45.0%"
+   * @returns {Object|null} Parsed stage info or null if not parseable
+   */
+  parseStageMessage(message) {
+    // Match pattern: "{stage_idx}/{num_stages} {stage_name}... {percentage}%"
+    const regex = /^(\d+)\/(\d+)\s+(.+?)\.{3}\s+(\d+(?:\.\d+)?)%$/;
+    const match = message.match(regex);
+    
+    if (match) {
+      return {
+        stageIdx: parseInt(match[1], 10),
+        numStages: parseInt(match[2], 10),
+        stageName: match[3],
+        stageProgress: parseFloat(match[4])
+      };
+    }
+    
+    return null;
+  }
+
+  /**
+   * Update or create dynamic stage progress bars
+   * @param {Object} stageInfo - Parsed stage information
+   */
+  updateDynamicStageProgress(stageInfo) {
+    const { stageIdx, numStages, stageName, stageProgress } = stageInfo;
+    const stageId = `stage-${stageIdx}`;
+    
+    // Check if stage progress bar already exists
+    let stageElement = document.getElementById(stageId);
+    
+    if (!stageElement) {
+      // Create new stage progress bar
+      stageElement = this.createStageProgressBar(stageId, stageIdx, numStages, stageName);
+      if (this.stageContainer) {
+        this.stageContainer.appendChild(stageElement);
+      }
+    }
+    
+    // Update the progress bar
+    const progressBar = stageElement.querySelector('.stage-progress-fill');
+    const progressText = stageElement.querySelector('.stage-progress-text');
+    
+    if (progressBar) {
+      progressBar.style.width = `${stageProgress}%`;
+    }
+    
+    if (progressText) {
+      progressText.textContent = `${stageProgress.toFixed(1)}%`;
+    }
+    
+    // Update stage status
+    const isComplete = stageProgress >= 100;
+    const isActive = stageProgress > 0 && stageProgress < 100;
+    
+    stageElement.classList.toggle('stage-complete', isComplete);
+    stageElement.classList.toggle('stage-active', isActive);
+    stageElement.classList.toggle('stage-pending', stageProgress === 0);
+  }
+
+  /**
+   * Create a new stage progress bar element
+   * @param {string} stageId - Unique stage ID
+   * @param {number} stageIdx - Stage index (1-based)
+   * @param {number} numStages - Total number of stages
+   * @param {string} stageName - Name of the stage
+   * @returns {HTMLElement} Created stage element
+   */
+  createStageProgressBar(stageId, stageIdx, numStages, stageName) {
+    const stageElement = document.createElement('div');
+    stageElement.id = stageId;
+    stageElement.className = 'dynamic-stage-progress stage-pending';
+    
+    stageElement.innerHTML = `
+      <div class="stage-header">
+        <span class="stage-label">${stageIdx}/${numStages} ${stageName}</span>
+        <span class="stage-progress-text">0.0%</span>
+      </div>
+      <div class="stage-progress-bar">
+        <div class="stage-progress-fill"></div>
+      </div>
+    `;
+    
+    return stageElement;
   }
 
   /**
@@ -318,82 +375,51 @@ export class ProgressTracker {
    * Update overall progress bar
    */
   updateOverallProgress() {
-    if (this.overallProgressBar) {
-      this.overallProgressBar.style.width = `${this.progressData.overall}%`;
+    // Use 'progress' from backend data, fallback to calculated progress from stages
+    const overallProgress = this.progressData.progress || this.calculateOverallProgressFromStages() || 0;
+    
+    if (this.progressBar) {
+      this.progressBar.style.width = `${overallProgress}%`;
     }
 
-    if (this.overallPercentage) {
-      this.overallPercentage.textContent = `${Math.round(this.progressData.overall)}%`;
+    if (this.progressText) {
+      this.progressText.textContent = `${Math.round(overallProgress)}%`;
     }
   }
 
   /**
-   * Update stage progress indicators
+   * Calculate overall progress from stage information (fallback method)
+   */
+  calculateOverallProgressFromStages() {
+    if (!this.progressData.message) return 0;
+    
+    const stageInfo = this.parseStageMessage(this.progressData.message);
+    if (!stageInfo) return 0;
+    
+    const { stageIdx, numStages, stageProgress } = stageInfo;
+    // Calculate overall progress: (completed stages + current stage progress) / total stages
+    const completedStages = Math.max(0, stageIdx - 1);
+    const overallProgress = (completedStages * 100 + stageProgress) / numStages;
+    return Math.min(100, Math.max(0, overallProgress));
+  }
+
+  /**
+   * Update stage progress indicators (legacy method - now handled by dynamic system)
    */
   updateStageProgress() {
-    if (!this.stageContainer) return;
-
-    const currentStage = this.progressData.stage;
-    const currentStageProgress = this.progressData.stageProgress || 0;
-
-    this.stages.forEach((stage, index) => {
-      const stageElement = this.stageContainer.querySelector(`[data-stage="${stage.id}"]`);
-      if (!stageElement) return;
-
-      const progressBar = stageElement.querySelector('.progress-fill');
-      const percentage = stageElement.querySelector('.stage-percentage');
-      const icon = stageElement.querySelector('.stage-icon');
-
-      // Determine stage state
-      let stageState, stageProgress;
-      
-      if (stage.id === currentStage) {
-        stageState = 'active';
-        stageProgress = currentStageProgress;
-      } else if (this.stages.findIndex(s => s.id === currentStage) > index) {
-        stageState = 'completed';
-        stageProgress = 100;
-      } else {
-        stageState = 'pending';
-        stageProgress = 0;
-      }
-
-      // Update visual state
-      stageElement.className = `stage-progress ${stageState}`;
-      
-      if (progressBar) {
-        progressBar.style.width = `${stageProgress}%`;
-      }
-
-      if (percentage) {
-        percentage.textContent = `${Math.round(stageProgress)}%`;
-      }
-
-      if (icon) {
-        switch (stageState) {
-          case 'completed':
-            icon.textContent = '✅';
-            break;
-          case 'active':
-            icon.textContent = '⚡';
-            break;
-          default:
-            icon.textContent = '⏳';
-        }
-      }
-    });
+    // This method is now handled by updateDynamicStageProgress
+    // Keep for compatibility but no longer needed
+    return;
   }
 
   /**
    * Update status text
    */
   updateStatusText() {
-    if (this.processingStatus) {
-      const currentStage = this.stages.find(s => s.id === this.progressData.stage);
-      const statusText = this.progressData.message || 
-                        (currentStage ? currentStage.description : 'Processing...');
-      
-      this.processingStatus.textContent = statusText;
+    // Update progress message if we have the DOM element
+    if (this.progressMessage) {
+      const statusText = this.progressData.message || 'Processing...';
+      this.progressMessage.textContent = statusText;
     }
   }
 
@@ -509,7 +535,23 @@ export class ProgressTracker {
       lastUpdate: null
     };
 
+    // Clear dynamic stage progress bars
+    this.clearDynamicStageProgress();
+
     this.updateUI();
+  }
+
+  /**
+   * Clear all dynamic stage progress bars
+   */
+  clearDynamicStageProgress() {
+    if (this.stageContainer) {
+      // Remove all dynamically created stage progress bars
+      const dynamicStages = this.stageContainer.querySelectorAll('.dynamic-stage-progress');
+      dynamicStages.forEach(stageElement => {
+        stageElement.remove();
+      });
+    }
   }
 
   /**

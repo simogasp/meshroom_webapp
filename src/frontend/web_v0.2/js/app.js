@@ -63,7 +63,13 @@ export class App {
       this.log('info', 'Application initialized successfully');
     } catch (error) {
       this.log('error', `Failed to initialize application: ${error.message}`);
-      this.showError('Initialization Error', 'Failed to start the application. Please refresh the page.');
+      // Check if modal is available before using it
+      if (this.components && this.components.modal) {
+        this.showError('Initialization Error', 'Failed to start the application. Please refresh the page.');
+      } else {
+        // Fallback to alert if modal is not available
+        alert('Initialization Error: Failed to start the application. Please refresh the page.');
+      }
     }
   }
 
@@ -94,6 +100,7 @@ export class App {
 
     // Initialize ProgressTracker
     this.components.progressTracker = new ProgressTracker({
+      apiClient: this.apiClient,
       onProgressUpdate: (progress) => this.handleProgressUpdate(progress),
       onProcessComplete: (results) => this.handleProcessComplete(results),
       onProcessError: (error) => this.handleProcessError(error)
@@ -519,12 +526,17 @@ export class App {
    * @param {string} message - Error message
    */
   showError(title, message) {
-    this.components.modal.showModal({
-      type: 'error',
-      title: title,
-      message: message,
-      buttons: ['OK']
-    });
+    if (this.components && this.components.modal) {
+      this.components.modal.showModal({
+        type: 'error',
+        title: title,
+        message: message,
+        buttons: ['OK']
+      });
+    } else {
+      // Fallback to alert if modal is not available
+      alert(`${title}: ${message}`);
+    }
   }
 
   /**

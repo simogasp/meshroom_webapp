@@ -337,6 +337,9 @@ export class App {
       this.state.currentJobId = jobId;
       this.log('info', `Processing started with job ID: ${jobId}`);
       
+      // Show processing section
+      this.showProcessingSection();
+      
       // Start progress tracking
       this.components.progressTracker?.startTracking(jobId);
       
@@ -365,6 +368,9 @@ export class App {
       this.log('info', 'Processing completed successfully');
       this.state.isProcessing = false;
       this.state.results = results;
+      
+      // Show results section
+      this.showResultsSection();
       
       // Load model in viewer
       if (results.modelUrl) {
@@ -564,6 +570,28 @@ export class App {
     
     if (parametersSection && !parametersSection.classList.contains('active')) {
       parametersSection.classList.add('active');
+    }
+  }
+
+  /**
+   * Show processing section when processing starts
+   */
+  showProcessingSection() {
+    const processingSection = document.getElementById('processingSection');
+    if (processingSection && !processingSection.classList.contains('active')) {
+      processingSection.classList.add('active');
+      this.log('debug', 'Processing section activated');
+    }
+  }
+
+  /**
+   * Show results section when processing completes
+   */
+  showResultsSection() {
+    const resultsSection = document.getElementById('resultsSection');
+    if (resultsSection && !resultsSection.classList.contains('active')) {
+      resultsSection.classList.add('active');
+      this.log('debug', 'Results section activated');
     }
   }
 

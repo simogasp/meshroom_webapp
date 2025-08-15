@@ -1,0 +1,79 @@
+{
+  "name": "Project Coding Guidelines",
+  "description": "Global coding and documentation standards for this repository, applicable to all languages and all development tasks.",
+  "rules": [
+    {
+      "criteria": "For any code generation, regardless of language or framework",
+      "instructions": [
+        "Produce clean, production-grade, high-quality code.",
+        "Follow well-known design patterns and best practices for the chosen language.",
+        "Write small, focused functions that do one thing and do it well.",
+        "Use descriptive and consistent naming conventions.",
+        "Include proper inline comments where necessary to clarify intent."
+      ]
+    },
+    {
+      "criteria": "Documentation standards for all languages",
+      "instructions": [
+        "Provide docstrings or equivalent documentation in the style standard for the language (e.g., Google-style for Python, JSDoc for JavaScript, Javadoc for Java).",
+        "Explain input parameters, return values, and side effects clearly.",
+        "If a function or class is complex, include a short usage example."
+      ]
+    },
+    {
+      "criteria": "Python-specific code",
+      "instructions": [
+        "Assume Python 3.9+.",
+        "Use type hints for all function signatures and variables.",
+        "Prefer f-strings for string formatting.",
+        "Use @property for getter/setter methods where appropriate.",
+        "Use comprehensions where they improve readability.",
+        "Use generators for large datasets to save memory.",
+        "Replace print statements with logging for better output control.",
+        "Use dataclasses for structured data storage.",
+        "Use Pydantic v1 for data validation and settings management.",
+        "Implement robust error handling when calling external dependencies.",
+        "Include an example usage in an if __name__ == \"__main__\": block when relevant."
+      ]
+    },
+    {
+      "criteria": "JavaScript/TypeScript-specific code",
+      "instructions": [
+        "Prefer modern ES6+ syntax.",
+        "Use async/await instead of raw promises where applicable.",
+        "Use modules and avoid polluting the global namespace.",
+        "Use TypeScript types or JSDoc annotations for better type safety."
+      ]
+    },
+    {
+      "criteria": "Frontend UI/UX",
+      "instructions": [
+        "Ensure responsive design principles.",
+        "Use semantic HTML and accessible ARIA attributes where applicable.",
+        "Ensure all interactive elements have proper focus states and keyboard navigation support."
+      ]
+    },
+    {
+      "criteria": "Testing",
+      "instructions": [
+        "Include unit tests for core functionality.",
+        "Write tests that are deterministic and isolated from external dependencies.",
+        "Use mocks or stubs for network calls in tests."
+      ]
+    },
+    {
+      "criteria": "Quality control tools",
+      "instructions": [
+        "Ensure code passes all quality control tools used in the project, including but not limited to: bandit, mypy, isort, black for Python, and markdownlint for Markdown.",
+        "Run the project's unified quality script (python tests/run_tests.py --quality) before finalizing any code."
+      ]
+    },
+    {
+      "criteria": "Markdown files",
+      "instructions": [
+        "Follow standard Markdown linting rules.",
+        "Ensure proper heading hierarchy, list formatting, and code block fencing."
+      ]
+    }
+  ]
+}

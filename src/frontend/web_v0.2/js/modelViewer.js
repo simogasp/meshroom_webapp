@@ -39,30 +39,54 @@ export class ModelViewer {
   }
 
   /**
-   * Initialize the 3D viewer
+   * Initialize the model viewer
    */
   async init() {
     try {
-      console.log('ModelViewer: Starting initialization...');
-      await this.loadThreeJS();
-      console.log('ModelViewer: Three.js loaded successfully');
+      console.log('ModelViewer: Initializing...');
+      
+      // Check if Three.js is already loaded
+      if (window.THREE) {
+        console.log('Three.js already loaded via script tag');
+        this.THREE = window.THREE;
+      } else {
+        console.log('Loading Three.js dynamically...');
+        await this.loadThreeJS();
+      }
+      
+      // Check if additional modules are needed
+      const needsModuleLoading = !window.THREE?.GLTFLoader && !window.GLTFLoader;
+      if (needsModuleLoading) {
+        console.log('Loading additional Three.js modules...');
+        await this.loadThreeJSModules();
+      } else {
+        console.log('Three.js modules already loaded via script tags');
+      }
+
+      console.log('Setting up DOM elements...');
       this.setupElements();
-      console.log('ModelViewer: Elements setup complete');
-      this.setupScene();
-      this.setupCamera();
-      this.setupRenderer();
-      this.setupLights();
+      
+      console.log('Setting up WebGL...');
+      this.setupWebGL();
+      
+      console.log('Setting up controls...');
       this.setupControls();
-      this.setupEventListeners();
+      
+      console.log('Starting render loop...');
       this.startRenderLoop();
       
       this.isReady = true;
       console.log('ModelViewer: Initialization complete');
-      this.options.onViewerReady();
+      
+      // Check what's available after initialization
+      console.log('Available loaders:', {
+        GLTFLoader: !!(window.THREE?.GLTFLoader || window.GLTFLoader),
+        OrbitControls: !!window.THREE?.OrbitControls
+      });
       
     } catch (error) {
-      console.error('Failed to initialize 3D viewer:', error);
-      this.options.onError(error);
+      console.error('ModelViewer: Failed to initialize:', error);
+      throw error;
     }
   }
 
@@ -96,35 +120,70 @@ export class ModelViewer {
   async loadThreeJSModules() {
     const modules = [
       {
-        url: 'https://cdn.jsdelivr.net/npm/three@0.144.0/examples/js/controls/OrbitControls.js',
+        url: 'https://unpkg.com/three@0.144.0/examples/js/controls/OrbitControls.js',
         name: 'OrbitControls'
       },
       {
-        url: 'https://cdn.jsdelivr.net/npm/three@0.144.0/examples/js/loaders/GLTFLoader.js',
+        url: 'https://unpkg.com/three@0.144.0/examples/js/loaders/GLTFLoader.js', 
         name: 'GLTFLoader'
       }
     ];
 
-    const promises = modules.map(module => {
-      return new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = module.url;
-        script.onload = () => {
-          console.log(`Three.js ${module.name} loaded successfully`);
-          resolve();
-        };
-        script.onerror = (error) => {
-          console.error(`Failed to load Three.js ${module.name}:`, error);
-          // Don't reject for optional modules, just log the error
+    for (const module of modules) {
+      try {
+        await this.loadModule(module);
+        console.log(`Three.js ${module.name} loaded successfully`);
+      } catch (error) {
+        console.error(`Failed to load Three.js ${module.name}:`, error);
+        // For GLTFLoader, try alternative sources
+        if (module.name === 'GLTFLoader') {
+          console.log('Trying alternative GLTFLoader sources...');
+          const alternatives = [
+            'https://unpkg.com/three@0.144.0/examples/js/loaders/GLTFLoader.js',
+            'https://threejs.org/examples/js/loaders/GLTFLoader.js'
+          ];
+          
+          let loaded = false;
+          for (const altUrl of alternatives) {
+            try {
+              await this.loadModule({ url: altUrl, name: module.name });
+              console.log(`GLTFLoader loaded from alternative source: ${altUrl}`);
+              loaded = true;
+              break;
+            } catch (altError) {
+              console.warn(`Alternative GLTFLoader source failed: ${altUrl}`, altError);
+            }
+          }
+          
+          if (!loaded) {
+            console.warn('GLTFLoader not available, some features may not work');
+          }
+        } else {
           console.warn(`${module.name} not available, some features may not work`);
-          resolve(); // Continue loading other modules
-        };
-        document.head.appendChild(script);
-      });
+        }
+      }
+    }
+    
+    // Check what's available after loading
+    console.log('Three.js modules loaded. Available:', {
+      THREE: !!window.THREE,
+      OrbitControls: !!window.THREE?.OrbitControls,
+      GLTFLoader: !!window.THREE?.GLTFLoader,
+      windowGLTFLoader: !!window.GLTFLoader
     });
+  }
 
-    await Promise.all(promises);
-    console.log('All Three.js modules loaded');
+  /**
+   * Load a single module
+   */
+  async loadModule(module) {
+    return new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = module.url;
+      script.onload = resolve;
+      script.onerror = reject;
+      document.head.appendChild(script);
+    });
   }
 
   /**
@@ -146,6 +205,23 @@ export class ModelViewer {
 
     // Setup viewer controls
     this.setupViewerControls();
+  }
+
+  /**
+   * Setup WebGL components (scene, camera, renderer, lights)
+   */
+  setupWebGL() {
+    if (!window.THREE) {
+      throw new Error('Three.js is not loaded');
+    }
+
+    this.THREE = window.THREE;
+    
+    // Initialize WebGL components
+    this.setupScene();
+    this.setupCamera();
+    this.setupRenderer();
+    this.setupLights();
   }
 
   /**
@@ -403,30 +479,68 @@ export class ModelViewer {
    * @returns {Object} Three.js loader instance
    */
   getLoaderForUrl(url) {
+    // Helper function to get GLTFLoader from various possible locations
+    const getGLTFLoader = () => {
+      // Try different ways the GLTFLoader might be available
+      if (window.THREE && window.THREE.GLTFLoader) {
+        console.log('Found GLTFLoader at THREE.GLTFLoader');
+        return new window.THREE.GLTFLoader();
+      }
+      // Sometimes modules are available globally (from static script tags)
+      if (window.GLTFLoader) {
+        console.log('Found GLTFLoader at window.GLTFLoader');
+        return new window.GLTFLoader();
+      }
+      // Check if it's in the examples namespace
+      if (window.THREE && window.THREE.examples && window.THREE.examples.loaders && window.THREE.examples.loaders.GLTFLoader) {
+        console.log('Found GLTFLoader at THREE.examples.loaders.GLTFLoader');
+        return new window.THREE.examples.loaders.GLTFLoader();
+      }
+      return null;
+    };
+
+    // Handle download endpoints without file extensions
+    if (url.includes('/download')) {
+      // Default to GLTF loader for download endpoints (backend serves GLB files)
+      const loader = getGLTFLoader();
+      if (loader) {
+        console.log('ModelViewer: Using GLTFLoader for download endpoint');
+        return loader;
+      } else {
+        console.error('Available in window:', Object.keys(window).filter(k => k.includes('THREE') || k.includes('GLTF')));
+        console.error('THREE object:', window.THREE);
+        if (window.THREE) {
+          console.error('THREE object keys:', Object.keys(window.THREE));
+        }
+        throw new Error('GLTFLoader not available - failed to load Three.js modules');
+      }
+    }
+    
     const extension = url.split('.').pop().toLowerCase();
     
     switch (extension) {
       case 'gltf':
       case 'glb':
-        if (window.THREE && THREE.GLTFLoader) {
-          return new THREE.GLTFLoader();
+        const loader = getGLTFLoader();
+        if (loader) {
+          return loader;
         } else {
           throw new Error('GLTFLoader not available - failed to load Three.js modules');
         }
       case 'obj':
-        if (window.THREE && THREE.OBJLoader) {
-          return new THREE.OBJLoader();
+        if (window.THREE && window.THREE.OBJLoader) {
+          return new window.THREE.OBJLoader();
         } else {
           throw new Error('OBJLoader not available');
         }
       case 'ply':
-        if (window.THREE && THREE.PLYLoader) {
-          return new THREE.PLYLoader();
+        if (window.THREE && window.THREE.PLYLoader) {
+          return new window.THREE.PLYLoader();
         } else {
           throw new Error('PLYLoader not available');
         }
       default:
-        throw new Error(`Unsupported model format: ${extension}`);
+        throw new Error(`Unsupported file format: ${extension}`);
     }
   }
 

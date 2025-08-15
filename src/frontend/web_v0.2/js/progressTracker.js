@@ -100,6 +100,7 @@ export class ProgressTracker {
   startTracking(jobId) {
     this.jobId = jobId;
     this.isTracking = true;
+    this.completed = false; // Reset completion flag
     this.progressData.startTime = Date.now();
     this.progressData.lastUpdate = Date.now();
 
@@ -461,7 +462,13 @@ export class ProgressTracker {
    * @param {Object} data - Completion data
    */
   handleCompletion(data) {
+    // Prevent multiple completion calls
+    if (this.completed) {
+      return;
+    }
+    
     this.log('info', 'Processing completed successfully');
+    this.completed = true;
     this.stopTracking();
     
     // Update to 100% completion

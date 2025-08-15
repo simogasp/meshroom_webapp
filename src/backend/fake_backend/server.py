@@ -56,8 +56,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Global configuration for model generation
-USE_REAL_MODEL = False
+# Global configuration for model generation (set by command line args)
+USE_REAL_MODEL = os.getenv('USE_REAL_MODEL', 'false').lower() == 'true'
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -465,16 +465,19 @@ if __name__ == "__main__":
         help="Use real model (avocado.glb) instead of generated fake model",
     )
     parser.add_argument(
-        "--reload", action="store_true", help="Enable auto-reload for development"
+        "--reload", action="store_true", default=False, help="Enable auto-reload for development"
     )
 
     args = parser.parse_args()
 
-    # Set global configuration
-    USE_REAL_MODEL = args.real_model
+    # Set environment variable for configuration
+    os.environ['USE_REAL_MODEL'] = str(args.real_model)
+    
+    # Update global configuration 
+    globals()['USE_REAL_MODEL'] = args.real_model
 
     # Log configuration
-    model_type = "real (avocado.glb)" if USE_REAL_MODEL else "fake (generated)"
+    model_type = "real (avocado.glb)" if args.real_model else "fake (generated)"
     logger.info(f"Starting server with {model_type} models")
     logger.info(f"Server will bind to {args.host}:{args.port}")
 

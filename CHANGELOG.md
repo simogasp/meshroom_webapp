@@ -19,6 +19,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Connection testing and configurable backend URL
   - Split-screen design for efficient testing workflow
 
+- **Job-Specific File Storage System**: Complete overhaul of file organization
+  - Individual directory structure for each job: `output/backend/fake_backend/{job_id}/`
+  - Isolated storage with dedicated subdirectories:
+    - `uploads/`: Uploaded image files with secure random filenames
+    - `models/`: Generated 3D model files (.glb format)
+    - `parameters.json`: Job parameters and metadata with creation timestamps
+  - Enhanced traceability with full path logging for all file operations
+  - Automatic directory creation during job initialization
+
+- **Job Parameter Persistence**: Enhanced job metadata management
+  - `save_job_parameters()` function for structured parameter storage
+  - JSON serialization with job metadata including creation timestamps
+  - Parameter validation and storage during job creation
+
+- **Enhanced Directory Management Functions**:
+  - `create_job_directories()`: Automated job-specific directory structure creation
+  - Project root path detection with relative path calculation
+  - OSError handling for robust directory operations
+
 ### Changed
 
 ### Deprecated

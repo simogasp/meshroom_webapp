@@ -8,13 +8,13 @@ progress updates.
 """
 
 import argparse
+import json
 import logging
 import os
 import re
 import secrets
 import sys
 from datetime import datetime
-from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
 # Add the parent directory to the path for imports when running directly
@@ -190,16 +190,72 @@ app.add_middleware(
 # Initialize job manager
 job_manager = JobManager()
 
-# Create directories for file storage in output folder
+# Create base directories for file storage in output folder
 # Get the absolute path to the project root (3 levels up from this file)
 project_root = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
-uploads_dir = os.path.join(project_root, "output", "backend", "fake_backend", "uploads")
-models_dir = os.path.join(project_root, "output", "backend", "fake_backend", "models")
+base_output_dir = os.path.join(project_root, "output", "backend", "fake_backend")
+os.makedirs(base_output_dir, exist_ok=True)
 
-os.makedirs(uploads_dir, exist_ok=True)
-os.makedirs(models_dir, exist_ok=True)
+
+def create_job_directories(job_id: str) -> Dict[str, str]:
+    """
+    Create directory structure for a specific job.
+
+    Args:
+        job_id: The job identifier
+
+    Returns:
+        Dictionary containing the paths for uploads, models, and job root
+
+    Raises:
+        OSError: If directory creation fails
+    """
+    job_dir = os.path.join(base_output_dir, job_id)
+    uploads_dir = os.path.join(job_dir, "uploads")
+    models_dir = os.path.join(job_dir, "models")
+
+    # Create all directories
+    os.makedirs(uploads_dir, exist_ok=True)
+    os.makedirs(models_dir, exist_ok=True)
+
+    return {
+        "job_dir": job_dir,
+        "uploads_dir": uploads_dir,
+        "models_dir": models_dir,
+    }
+
+
+def save_job_parameters(job_id: str, parameters: Dict[str, Any]) -> str:
+    """
+    Save job parameters to a JSON file in the job directory.
+
+    Args:
+        job_id: The job identifier
+        parameters: The job parameters to save
+
+    Returns:
+        Path to the saved parameters file
+
+    Raises:
+        OSError: If file writing fails
+    """
+    job_dir = os.path.join(base_output_dir, job_id)
+    parameters_path = os.path.join(job_dir, "parameters.json")
+
+    # Add metadata to parameters
+    parameters_with_metadata = {
+        "job_id": job_id,
+        "created_at": datetime.now().isoformat(),
+        "parameters": parameters,
+    }
+
+    with open(parameters_path, "w", encoding="utf-8") as f:
+        json.dump(parameters_with_metadata, f, indent=2, ensure_ascii=False)
+
+    logger.info(f"Saved job parameters to {parameters_path}")
+    return parameters_path
 
 
 @app.on_event("startup")
@@ -208,8 +264,7 @@ async def startup_event() -> None:
     model_type = "real (monstree.glb)" if USE_REAL_MODEL else "fake (generated)"
     logger.info("Starting Fake Photogrammetry Backend v0.1.0")
     logger.info(f"Model type: {model_type}")
-    logger.info(f"Upload directory: {uploads_dir}")
-    logger.info(f"Models directory: {models_dir}")
+    logger.info(f"Base output directory: {base_output_dir}")
 
 
 @app.on_event("shutdown")
@@ -284,6 +339,22 @@ async def upload_images(
                 status_code=400, detail="Too many files (maximum 100 allowed)"
             )
 
+        # Create the processing job first to get the job ID
+        job = ProcessingJob(
+            parameters={
+                "quality": request_data.quality,
+                "max_features": request_data.max_features,
+                "enable_gpu": request_data.enable_gpu,
+            },
+        )
+
+        # Create job-specific directories
+        job_dirs = create_job_directories(job.job_id)
+        uploads_dir = job_dirs["uploads_dir"]
+
+        # Save job parameters
+        save_job_parameters(job.job_id, job.parameters)
+
         # Process uploaded files
         images = []
         total_size = 0
@@ -345,15 +416,8 @@ async def upload_images(
         if not images:
             raise HTTPException(status_code=400, detail="No valid images provided")
 
-        # Create the processing job
-        job = ProcessingJob(
-            images=images,
-            parameters={
-                "quality": request_data.quality,
-                "max_features": request_data.max_features,
-                "enable_gpu": request_data.enable_gpu,
-            },
-        )
+        # Update job with images
+        job.images = images
 
         # Register job with manager
         job_id = job_manager.create_job(job)
@@ -363,7 +427,7 @@ async def upload_images(
 
         logger.info(
             f"Created job {job_id} with {len(images)} images "
-            f"({total_size / 1024 / 1024:.1f} MB total)"
+            f"({total_size / 1024 / 1024:.1f} MB total) in {job_dirs['job_dir']}"
         )
 
         return JobResponse(
@@ -451,16 +515,14 @@ async def download_model(job_id: str) -> FileResponse:
             model_data = generate_dummy_model(validated_job_id)
             model_type = "dummy"
 
-        # Instead of using any user-controlled data in paths, use a secure lookup approach
-        # Generate a cryptographically secure filename that doesn't depend on user input
+        # Create job-specific model directory if it doesn't exist
+        job_dirs = create_job_directories(validated_job_id)
+        models_dir = job_dirs["models_dir"]
 
-        # Create a secure temporary filename
+        # Create a secure filename for the model
         secure_filename = f"model_{secrets.token_hex(16)}.glb"
         # NOSONAR: This path construction uses cryptographically secure random data, not user input
         model_path = os.path.join(models_dir, secure_filename)
-
-        # Note: In production, store the filename mapping in database
-        # For this demo, we rely on the job_id being properly validated above
 
         # Save model to file
         # NOSONAR: Path is constructed with secure random data, validated base directory

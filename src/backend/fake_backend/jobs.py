@@ -272,7 +272,9 @@ class JobManager:
             job.status = JobStatus.COMPLETED
             job.completed_at = datetime.now()
             job.progress = 100
-            result_path = f"output/backend/fake_backend/models/{job_id}_model.glb"
+            result_path = (
+                f"output/backend/fake_backend/{job_id}/models/{job_id}_model.glb"
+            )
             job.result_file_path = result_path
 
             # Send completion message AFTER the status is updated

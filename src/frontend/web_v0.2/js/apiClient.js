@@ -273,8 +273,8 @@ export class ApiClient {
    * @returns {Promise<Object>} Cancellation result
    */
   async cancelJob(jobId) {
-    return await this.request(`/jobs/${encodeURIComponent(jobId)}/cancel`, {
-      method: 'POST'
+    return await this.request(`/jobs/${encodeURIComponent(jobId)}`, {
+      method: 'DELETE'
     });
   }
 

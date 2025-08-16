@@ -12,6 +12,7 @@ export class ProgressTracker {
   constructor(options = {}) {
     this.options = {
       updateInterval: 100,
+      pollInterval: 2000, // Poll every 2 seconds
       smoothingFactor: 0.1,
       onProgressUpdate: () => {},
       onCompletion: () => {},
@@ -25,6 +26,8 @@ export class ProgressTracker {
     this.startTime = null;
     this.lastProgressTime = null;
     this.velocityHistory = [];
+    this.stages = []; // Initialize empty stages array
+    this.cancelling = false; // Flag to prevent multiple cancellation attempts
     
     // Get DOM elements
     this.progressBar = document.getElementById('progressBar');
@@ -60,11 +63,12 @@ export class ProgressTracker {
       throw new Error('Progress bar elements not found');
     }
 
-    // Cancel button handler
-    if (this.cancelButton) {
+    // Cancel button handler (prevent duplicate listeners)
+    if (this.cancelButton && !this.cancelButton.hasAttribute('data-progress-tracker-listener')) {
       this.cancelButton.addEventListener('click', () => {
         this.cancelProcessing();
       });
+      this.cancelButton.setAttribute('data-progress-tracker-listener', 'true');
     }
   }
 
@@ -73,6 +77,13 @@ export class ProgressTracker {
    */
   renderStages() {
     if (!this.stageContainer) return;
+    
+    // Check if stages is defined and is an array
+    if (!this.stages || !Array.isArray(this.stages) || this.stages.length === 0) {
+      // Clear any existing content for empty stages
+      this.stageContainer.innerHTML = '';
+      return;
+    }
 
     this.stageContainer.innerHTML = this.stages.map(stage => `
       <div class="stage-progress" data-stage="${stage.id}">
@@ -209,15 +220,27 @@ export class ProgressTracker {
    * Poll progress via HTTP
    */
   async pollProgress() {
+    // Don't poll if tracking has been stopped
+    if (!this.isTracking || !this.jobId) {
+      return;
+    }
+
     try {
       if (!this.apiClient) {
         throw new Error('API client not available');
       }
       
       const data = await this.apiClient.getJobStatus(this.jobId);
-      this.handleProgressUpdate(data);
+      
+      // Double check that we're still tracking before handling the update
+      if (this.isTracking) {
+        this.handleProgressUpdate(data);
+      }
     } catch (error) {
-      this.log('error', 'Failed to poll progress', error);
+      // Only log errors if we're still tracking
+      if (this.isTracking) {
+        this.log('error', 'Failed to poll progress', error);
+      }
     }
   }
 
@@ -226,6 +249,11 @@ export class ProgressTracker {
    * @param {Object} data - Progress data
    */
   handleProgressUpdate(data) {
+    // Don't handle updates if tracking has been stopped
+    if (!this.isTracking) {
+      return;
+    }
+
     this.progressData = {
       ...this.progressData,
       ...data,
@@ -486,6 +514,11 @@ export class ProgressTracker {
    * @param {Object} data - Error data
    */
   handleError(data) {
+    // Don't handle errors if tracking has already been stopped (prevents duplicate errors)
+    if (!this.isTracking) {
+      return;
+    }
+
     this.log('error', `Processing failed: ${data.error || 'Unknown error'}`);
     this.stopTracking();
     
@@ -494,34 +527,67 @@ export class ProgressTracker {
     this.progressData.message = data.error || 'Processing failed';
     this.updateUI();
 
-    // Notify error
-    this.options.onProcessError({
-      message: data.error || 'Processing failed',
-      details: data.details,
-      stage: data.stage
-    });
+    // Notify error (only once)
+    if (this.options.onProcessError) {
+      this.options.onProcessError({
+        message: data.error || 'Processing failed',
+        details: data.details,
+        stage: data.stage
+      });
+    }
   }
 
   /**
    * Cancel processing
    */
   async cancelProcessing() {
-    if (!this.jobId) return;
+    if (!this.jobId || !this.apiClient) return;
+    
+    // Prevent multiple cancellation attempts
+    if (this.cancelling) return;
+    this.cancelling = true;
+
+    // Store jobId before stopping tracking (which sets it to null)
+    const jobIdToCancel = this.jobId;
 
     try {
-      const response = await fetch(`/jobs/${encodeURIComponent(this.jobId)}/cancel`, {
-        method: 'POST'
-      });
-
-      if (response.ok) {
-        this.log('info', 'Processing cancelled successfully');
-        this.stopTracking();
-        this.reset();
-      } else {
-        throw new Error(`Failed to cancel: ${response.statusText}`);
+      this.log('info', 'Cancelling processing...');
+      
+      // Stop tracking FIRST to prevent polling conflicts
+      this.stopTracking();
+      
+      // Use the stored job ID for the cancel request
+      await this.apiClient.cancelJob(jobIdToCancel);
+      
+      this.log('info', 'Processing cancelled successfully');
+      
+      // Reset UI state
+      this.reset();
+      
+      // Update progress data to show cancellation
+      this.progressData = {
+        ...this.progressData,
+        status: 'cancelled',
+        message: 'Processing cancelled by user'
+      };
+      this.updateUI();
+      
+      // Notify the app about the cancellation (only once)
+      if (this.options.onProcessError) {
+        this.options.onProcessError({
+          message: 'Processing cancelled by user',
+          details: 'Job was cancelled',
+          stage: 'cancelled'
+        });
       }
+      
     } catch (error) {
       this.log('error', 'Failed to cancel processing', error);
+      // Still stop tracking even if cancel request failed
+      this.stopTracking();
+      this.reset();
+    } finally {
+      this.cancelling = false;
     }
   }
 
@@ -541,6 +607,9 @@ export class ProgressTracker {
       startTime: null,
       lastUpdate: null
     };
+
+    // Reset cancelling flag
+    this.cancelling = false;
 
     // Clear dynamic stage progress bars
     this.clearDynamicStageProgress();

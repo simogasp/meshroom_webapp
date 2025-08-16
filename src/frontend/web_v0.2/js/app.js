@@ -94,6 +94,9 @@ export class App {
       onProcessError: (error) => this.handleProcessError(error)
     });
 
+    // Initialize progress tracker DOM elements
+    this.components.progressTracker.init();
+
     // Initialize ModelViewer
     this.components.modelViewer = new ModelViewer({
       onViewerReady: () => this.handleViewerReady(),
@@ -420,11 +423,24 @@ export class App {
    * @param {Object} error - Error information
    */
   handleProcessError(error) {
-    this.log('error', `Processing failed: ${error.message}`);
-    this.state.isProcessing = false;
-    this.state.currentJobId = null;
-    this.showError('Processing Failed', error.message);
-    this.saveState();
+    // Check if this is a cancellation rather than an error
+    const isCancellation = error.stage === 'cancelled' || 
+                          error.message.toLowerCase().includes('cancelled') ||
+                          error.message.toLowerCase().includes('cancel');
+    
+    if (isCancellation) {
+      this.log('info', `Processing cancelled: ${error.message}`);
+      this.state.isProcessing = false;
+      this.state.currentJobId = null;
+      this.showSuccess('Processing Cancelled', 'The processing was successfully cancelled by the user.');
+      this.saveState();
+    } else {
+      this.log('error', `Processing failed: ${error.message}`);
+      this.state.isProcessing = false;
+      this.state.currentJobId = null;
+      this.showError('Processing Failed', error.message);
+      this.saveState();
+    }
   }
 
   /**

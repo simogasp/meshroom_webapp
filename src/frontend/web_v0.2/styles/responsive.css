@@ -12,6 +12,7 @@
     --spacing-xl: 1.5rem;
     --spacing-2xl: 2rem;
     --spacing-3xl: 2.5rem;
+    --sidebar-width: 0px; /* Hide sidebar on small mobile */
   }
 
   .app-container {
@@ -23,6 +24,25 @@
       "main"
       "log"
       "progress";
+  }
+
+  /* Hide log panel on small mobile by default */
+  .log-panel {
+    display: none !important;
+  }
+
+  /* Show log panel as bottom sheet when explicitly shown */
+  .log-panel.force-visible {
+    display: flex !important;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 40vh;
+    border-left: none;
+    border-top: 1px solid var(--gray-200);
+    z-index: 200;
+    box-shadow: var(--shadow-xl);
   }
 
   .app-header {
@@ -128,6 +148,10 @@
 
 /* Large mobile devices (480px - 767px) */
 @media (min-width: 480px) and (max-width: 767px) {
+  :root {
+    --sidebar-width: 0px; /* Hide sidebar on large mobile */
+  }
+
   .app-container {
     grid-template-columns: 1fr;
     grid-template-rows: auto auto 1fr auto auto;
@@ -137,6 +161,25 @@
       "main"
       "progress"
       "log";
+  }
+
+  /* Hide log panel on large mobile by default */
+  .log-panel {
+    display: none !important;
+  }
+
+  /* Show log panel as modal when explicitly shown */
+  .log-panel.force-visible {
+    display: flex !important;
+    position: fixed;
+    top: 10vh;
+    left: 5vw;
+    right: 5vw;
+    height: 60vh;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    z-index: 200;
+    box-shadow: var(--shadow-xl);
   }
 
   .main-content {

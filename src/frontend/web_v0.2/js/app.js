@@ -1,18 +1,6 @@
 /**
  * Main Application Module
- * Coordinates all frontend components and manages      onViewerReady: () => this.handleViewerReady(),
-      onModelLoad: (modelData) => this.handleModelLoad(modelData)
-    });
-
-    // Initialize LogPanel
-    this.components.logPanel = new LogPanel({
-      maxEntries: 1000,
-      enableExport: true
-    });
-
-    // Initialize Modal
-    this.components.modal = new Modal();
-  }tate
+ * Coordinates all frontend components and manages global state
  * @module App
  */
 
@@ -112,10 +100,11 @@ export class App {
       onModelLoaded: () => this.handleModelLoaded()
     });
 
-    // Initialize LogPanel
+    // Initialize LogPanel (simple version)
     this.components.logPanel = new LogPanel({
+      containerId: 'logContainer',
       maxEntries: 1000,
-      enableExport: true
+      autoScroll: true
     });
 
     // Initialize Modal

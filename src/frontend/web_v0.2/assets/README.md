@@ -4,7 +4,7 @@ This directory contains all static assets for the Meshroom WebApp frontend.
 
 ## Directory Organization
 
-```
+```none
 assets/
 ├── animations/          # Loading spinners, progress animations, transitions
 ├── backgrounds/         # Background images, patterns, textures
@@ -17,30 +17,36 @@ assets/
 ## Usage Guidelines
 
 ### Icons (`icons/`)
-- **Purpose**: Small graphical elements for UI components
+
+- **Purpose**: Small graphical elements for UI components and favicons
 - **Formats**: `.ico`, `.svg`, `.png` (16x16, 24x24, 32x32, 48x48)
-- **Examples**: favicon.ico, close-button.svg, menu-icon.png
+- **Examples**: favicon.ico, close-button.svg, menu-icon.png, apple-touch-icon.png
 - **Naming**: Use kebab-case, descriptive names (`search-icon.svg`, `close-btn.png`)
+- **Note**: Web manifests (`site.webmanifest`) belong in the web root, not here
 
 ### Images (`images/`)
+
 - **Purpose**: General purpose images and illustrations
 - **Formats**: `.jpg`, `.png`, `.webp`, `.svg`
 - **Examples**: hero-image.jpg, placeholder.png, diagram.svg
 - **Naming**: Use kebab-case, descriptive names
 
 ### Logos (`logos/`)
+
 - **Purpose**: Brand and product logos
 - **Formats**: `.svg` (preferred), `.png` (high-res)
 - **Examples**: meshroom-logo.svg, alicevision-logo.png
 - **Variants**: Include different sizes and color variants
 
 ### Backgrounds (`backgrounds/`)
+
 - **Purpose**: Background images, patterns, textures
 - **Formats**: `.jpg`, `.png`, `.webp`
 - **Examples**: hero-bg.jpg, texture-pattern.png
 - **Optimization**: Compress for web use
 
 ### Animations (`animations/`)
+
 - **Purpose**: Animated graphics and loading indicators
 - **Formats**: `.gif`, `.svg`, `.lottie`
 - **Examples**: loading-spinner.svg, progress-animation.gif

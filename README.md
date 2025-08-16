@@ -148,7 +148,7 @@ meshroom_webapp/
 │   ├── security/                  # Security vulnerability tests
 │   └── run_tests.py              # Test runner with CI/CD integration
 ├── assets/                        # Static assets
-│   └── avocado.glb               # Real 3D model for testing
+│   └── monstree.glb               # Real 3D model for testing
 ├── .github/workflows/             # CI/CD pipeline configuration
 ├── reports/                       # Generated test and quality reports
 ├── requirements.txt               # Python dependencies

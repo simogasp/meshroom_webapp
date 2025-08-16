@@ -9,9 +9,9 @@ The backend server now supports dynamic selection between fake (generated) and r
 ### `generate_real_model(job_id: str) -> bytes`
 
 - **Location**: `src/backend/fake_backend/jobs.py`
-- **Purpose**: Loads the real avocado.glb model from the assets folder
+- **Purpose**: Loads the real monstree.glb model from the assets folder
 - **Signature**: Same as `generate_dummy_model(job_id: str)`
-- **Returns**: Binary GLB model data (8.3MB avocado model)
+- **Returns**: Binary GLB model data (8.3MB monstree model)
 - **Error Handling**: Raises FileNotFoundError or IOError with detailed messages
 
 ## Command Line Usage
@@ -38,7 +38,7 @@ python3 src/backend/fake_backend/server.py --host 0.0.0.0 --port 8080 --real-mod
 
 - `--host`: Host to bind server to (default: 127.0.0.1)
 - `--port`: Port to bind server to (default: 8000)
-- `--real-model`: Use real avocado.glb model instead of generated fake models
+- `--real-model`: Use real monstree.glb model instead of generated fake models
 - `--reload`: Enable auto-reload for development
 
 ## API Changes
@@ -53,11 +53,11 @@ python3 src/backend/fake_backend/server.py --host 0.0.0.0 --port 8080 --real-mod
 ### Root endpoint `/`
 
 - Now displays which model mode the server is running in
-- Shows "real (avocado.glb)" or "fake (generated)" in the response
+- Shows "real (monstree.glb)" or "fake (generated)" in the response
 
 ## Asset Requirements
 
-- **File**: `assets/avocado.glb`
+- **File**: `assets/monstree.glb`
 - **Size**: ~8.3MB
 - **Format**: Binary GLB (valid glTF 2.0)
 - **Status**: ✅ Present and working

@@ -61,10 +61,10 @@ def generate_real_model(job_id: str) -> bytes:
         job_id: The job identifier (used for logging, not file selection)
 
     Returns:
-        Real GLB file content as bytes from assets/avocado.glb
+        Real GLB file content as bytes from assets/monstree.glb
 
     Raises:
-        FileNotFoundError: If the avocado.glb file is not found
+        FileNotFoundError: If the monstree.glb file is not found
         IOError: If there's an error reading the file
     """
     # Get the project root path (4 levels up from this file)
@@ -72,7 +72,7 @@ def generate_real_model(job_id: str) -> bytes:
     project_root = os.path.dirname(
         os.path.dirname(os.path.dirname(os.path.dirname(current_file)))
     )
-    asset_path = os.path.join(project_root, "assets", "avocado.glb")
+    asset_path = os.path.join(project_root, "assets", "monstree.glb")
 
     try:
         with open(asset_path, "rb") as f:

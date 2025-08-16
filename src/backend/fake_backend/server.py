@@ -205,7 +205,7 @@ os.makedirs(models_dir, exist_ok=True)
 @app.on_event("startup")
 async def startup_event() -> None:
     """Initialize application on startup."""
-    model_type = "real (avocado.glb)" if USE_REAL_MODEL else "fake (generated)"
+    model_type = "real (monstree.glb)" if USE_REAL_MODEL else "fake (generated)"
     logger.info("Starting Fake Photogrammetry Backend v0.1.0")
     logger.info(f"Model type: {model_type}")
     logger.info(f"Upload directory: {uploads_dir}")
@@ -612,7 +612,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--real-model",
         action="store_true",
-        help="Use real model (avocado.glb) instead of generated fake model",
+        help="Use real model (monstree.glb) instead of generated fake model",
     )
     parser.add_argument(
         "--reload",
@@ -630,7 +630,7 @@ if __name__ == "__main__":
     globals()["USE_REAL_MODEL"] = args.real_model
 
     # Log configuration
-    model_type = "real (avocado.glb)" if args.real_model else "fake (generated)"
+    model_type = "real (monstree.glb)" if args.real_model else "fake (generated)"
     logger.info(f"Starting server with {model_type} models")
     logger.info(f"Server will bind to {args.host}:{args.port}")
 

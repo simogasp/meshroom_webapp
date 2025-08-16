@@ -1,0 +1,14 @@
+# Documentation build files
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+*~
+
+# Generated documentation
+/generated/
+/build/

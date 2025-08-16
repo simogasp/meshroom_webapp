@@ -509,7 +509,7 @@ export class ProgressTracker {
     if (!this.jobId) return;
 
     try {
-      const response = await fetch(`/jobs/${this.jobId}/cancel`, {
+      const response = await fetch(`/jobs/${encodeURIComponent(this.jobId)}/cancel`, {
         method: 'POST'
       });
 

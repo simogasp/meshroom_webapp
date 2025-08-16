@@ -246,7 +246,7 @@ export class ApiClient {
    * @returns {Promise<Object>} Job status
    */
   async getJobStatus(jobId) {
-    return await this.request(`/jobs/${jobId}`);
+    return await this.request(`/jobs/${encodeURIComponent(jobId)}`);
   }
 
   /**
@@ -255,7 +255,7 @@ export class ApiClient {
    * @returns {Promise<Object>} Job progress
    */
   async getJobProgress(jobId) {
-    return await this.request(`/jobs/${jobId}/progress`);
+    return await this.request(`/jobs/${encodeURIComponent(jobId)}/progress`);
   }
 
   /**
@@ -264,7 +264,7 @@ export class ApiClient {
    * @returns {Promise<Object>} Job results
    */
   async getJobResults(jobId) {
-    return await this.request(`/jobs/${jobId}/results`);
+    return await this.request(`/jobs/${encodeURIComponent(jobId)}/results`);
   }
 
   /**
@@ -273,7 +273,7 @@ export class ApiClient {
    * @returns {Promise<Object>} Cancellation result
    */
   async cancelJob(jobId) {
-    return await this.request(`/jobs/${jobId}/cancel`, {
+    return await this.request(`/jobs/${encodeURIComponent(jobId)}/cancel`, {
       method: 'POST'
     });
   }
@@ -284,7 +284,7 @@ export class ApiClient {
    * @returns {Promise<Object>} Deletion result
    */
   async deleteJob(jobId) {
-    return await this.request(`/jobs/${jobId}`, {
+    return await this.request(`/jobs/${encodeURIComponent(jobId)}`, {
       method: 'DELETE'
     });
   }

@@ -388,7 +388,7 @@ export class App {
       let modelUrl = results.modelUrl; // Check if already provided
       if (!modelUrl && (results.job_id || this.state.currentJobId)) {
         const jobId = results.job_id || this.state.currentJobId;
-        modelUrl = `${this.apiClient.options.baseUrl}/jobs/${jobId}/download`;
+        modelUrl = `${this.apiClient.options.baseUrl}/jobs/${encodeURIComponent(jobId)}/download`;
         console.log('Constructed model URL:', modelUrl);
       }
       
@@ -505,7 +505,7 @@ export class App {
     }
 
     try {
-      const downloadUrl = `${this.apiClient.options.baseUrl}/jobs/${this.state.currentJobId}/download`;
+      const downloadUrl = `${this.apiClient.options.baseUrl}/jobs/${encodeURIComponent(this.state.currentJobId)}/download`;
       this.log('info', `Downloading model from: ${downloadUrl}`);
       
       // Create a temporary download link

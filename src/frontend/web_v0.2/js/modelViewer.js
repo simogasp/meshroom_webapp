@@ -345,8 +345,15 @@ export class ModelViewer {
       this.controls.autoRotate = this.options.autoRotate;
       this.controls.autoRotateSpeed = 2.0;
       this.controls.maxPolarAngle = Math.PI;
-      this.controls.minDistance = 1;
+      
+      // Set reasonable default zoom limits
+      this.controls.minDistance = 0.1;
       this.controls.maxDistance = 100;
+      
+      // Zoom speed
+      this.controls.zoomSpeed = 1.0;
+      this.controls.panSpeed = 0.8;
+      this.controls.rotateSpeed = 1.0;
     }
   }
 
@@ -615,28 +622,79 @@ export class ModelViewer {
   }
 
   /**
-   * Fit model to camera view
+   * Fit model to camera view with proper scaling
    */
   fitModelToView() {
     if (!this.model || !this.camera) return;
 
+    // Calculate bounding box
     const box = new THREE.Box3().setFromObject(this.model);
     const center = box.getCenter(new THREE.Vector3());
     const size = box.getSize(new THREE.Vector3());
+    
+    console.log('Model bounding box:', {
+      center: center.toArray(),
+      size: size.toArray(),
+      max: box.max.toArray(),
+      min: box.min.toArray()
+    });
 
-    // Calculate optimal camera position
+    // Check if the model is too small or too large
     const maxDim = Math.max(size.x, size.y, size.z);
+    console.log('Model max dimension:', maxDim);
+    
+    // Define target size for the model (we want it to fit in roughly a 4-unit cube)
+    const targetSize = 4.0;
+    
+    // Scale the model if needed
+    if (maxDim > 0) {
+      const scaleFactor = targetSize / maxDim;
+      console.log('Applying scale factor:', scaleFactor);
+      
+      // Only scale if the model is significantly different from target size
+      if (scaleFactor < 0.1 || scaleFactor > 10) {
+        this.model.scale.setScalar(scaleFactor);
+        console.log('Model scaled by factor:', scaleFactor);
+        
+        // Recalculate bounding box after scaling
+        box.setFromObject(this.model);
+        center.copy(box.getCenter(new THREE.Vector3()));
+        size.copy(box.getSize(new THREE.Vector3()));
+      }
+    }
+    
+    // Center the model at origin
+    this.model.position.sub(center);
+    console.log('Model centered, moved by:', center.toArray());
+    
+    // Position camera to view the scaled and centered model
+    const newMaxDim = Math.max(size.x, size.y, size.z);
     const fov = this.camera.fov * (Math.PI / 180);
-    let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
+    let cameraDistance = Math.abs(newMaxDim / 2 / Math.tan(fov / 2));
     
-    cameraZ *= 2.5; // Add some padding
+    // Add padding and ensure minimum distance
+    cameraDistance = Math.max(cameraDistance * 2.5, 5);
     
-    this.camera.position.set(center.x + cameraZ, center.y + cameraZ, center.z + cameraZ);
-    this.camera.lookAt(center);
+    console.log('Setting camera distance:', cameraDistance);
     
+    // Position camera at a good angle
+    this.camera.position.set(
+      cameraDistance * 0.7,
+      cameraDistance * 0.5,
+      cameraDistance * 0.7
+    );
+    this.camera.lookAt(0, 0, 0);
+    
+    // Update controls to focus on the origin
     if (this.controls) {
-      this.controls.target.copy(center);
+      this.controls.target.set(0, 0, 0);
+      this.controls.minDistance = newMaxDim * 0.5;
+      this.controls.maxDistance = newMaxDim * 10;
       this.controls.update();
+      console.log('Controls updated, distance limits:', {
+        min: this.controls.minDistance,
+        max: this.controls.maxDistance
+      });
     }
   }
 
@@ -674,14 +732,19 @@ export class ModelViewer {
     if (this.model) {
       this.fitModelToView();
     } else {
+      // Default view when no model is loaded
       this.camera.position.set(5, 5, 5);
       this.camera.lookAt(0, 0, 0);
       
       if (this.controls) {
         this.controls.target.set(0, 0, 0);
+        this.controls.minDistance = 1;
+        this.controls.maxDistance = 100;
         this.controls.update();
       }
     }
+    
+    console.log('View reset, camera position:', this.camera.position.toArray());
   }
 
   /**

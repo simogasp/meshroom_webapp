@@ -11,6 +11,7 @@ import argparse
 import logging
 import os
 import re
+import secrets
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -161,7 +162,7 @@ def safe_join(
     canonical_full = os.path.realpath(full_path)
 
     # Ensure the full path is within the base directory
-    if not canonical_full.startswith(canonical_base + os.sep):
+    if os.path.commonpath([canonical_base, canonical_full]) != canonical_base:
         raise ValueError(f"Path traversal detected: {filename}")
 
     return full_path
@@ -303,8 +304,6 @@ async def upload_images(
                 )
 
             # Generate a completely secure filename without any user-controlled data
-            import secrets
-
             # Get file extension safely from original filename
             original_name = file.filename or "upload.jpg"
             _, ext = os.path.splitext(original_name.lower())
@@ -318,7 +317,7 @@ async def upload_images(
             secure_filename = f"upload_{secrets.token_hex(16)}{ext}"
 
             # NOSONAR: Path construction uses cryptographically secure random data, not user input
-            upload_path = uploads_dir + os.sep + secure_filename
+            upload_path = os.path.join(uploads_dir, secure_filename)
 
             # NOSONAR: Path is constructed with secure random data, validated base directory
             with open(upload_path, "wb") as f:
@@ -444,12 +443,6 @@ async def download_model(job_id: str) -> FileResponse:
         )
 
     try:
-        # Validate job_id for security
-        try:
-            validated_job_id = validate_job_id(job_id)
-        except ValueError as e:
-            raise HTTPException(status_code=400, detail=f"Invalid job ID: {e}")
-
         # Generate the model file (real or fake based on configuration)
         if USE_REAL_MODEL:
             model_data = generate_real_model(validated_job_id)
@@ -460,13 +453,11 @@ async def download_model(job_id: str) -> FileResponse:
 
         # Instead of using any user-controlled data in paths, use a secure lookup approach
         # Generate a cryptographically secure filename that doesn't depend on user input
-        import secrets
-        import tempfile
 
         # Create a secure temporary filename
         secure_filename = f"model_{secrets.token_hex(16)}.glb"
         # NOSONAR: This path construction uses cryptographically secure random data, not user input
-        model_path = models_dir + os.sep + secure_filename
+        model_path = os.path.join(models_dir, secure_filename)
 
         # Note: In production, store the filename mapping in database
         # For this demo, we rely on the job_id being properly validated above

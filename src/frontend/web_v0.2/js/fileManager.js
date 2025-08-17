@@ -23,7 +23,18 @@ class FileManager {
 
     this.selectedFiles = [];
     this.fileMap = new Map(); // Map to track files by unique ID
-    this.fileRelativePaths = new WeakMap(); // Store relative paths for files
+    /**
+     * Stores the relative path for each File object.
+     * 
+     * WeakMap is used instead of Map so that when a File object is no longer referenced
+     * elsewhere (e.g., after being removed from selectedFiles), its entry is automatically
+     * garbage collected. This prevents memory leaks that could occur if a regular Map
+     * were used, since File objects can be large and numerous.
+     * 
+     * When files are processed and removed from the file manager, their corresponding
+     * relative path entries in this WeakMap will also be cleaned up automatically.
+     */
+    this.fileRelativePaths = new WeakMap();
     this.fileCounter = 0;
     
     this.init();
@@ -289,8 +300,10 @@ class FileManager {
               if (typeof this.options.onError === 'function') {
                 this.options.onError({
                   type: 'file_read_error',
-                  message: `Failed to read file "${entry.fullPath}": ${error.message}`,
-                  entry: entry
+                  message: `Failed to read file "${entry.fullPath}" from directory "${directoryEntry.name}": ${error.message}`,
+                  entry: entry,
+                  directory: directoryEntry.name,
+                  errorType: error.name || 'FileReadError'
                 });
               }
             }

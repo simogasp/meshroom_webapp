@@ -336,6 +336,34 @@ def _parse_upload_parameters(parameters: Optional[str]) -> Dict[str, Any]:
     return dynamic_params
 
 
+def _validate_safe_path(uploads_dir: str, nested_dir: str, relative_path: str) -> None:
+    """
+    Validate that the nested directory is safe and within the uploads directory.
+
+    Args:
+        uploads_dir: The base uploads directory
+        nested_dir: The nested directory path to validate
+        relative_path: The original relative path (for error messages)
+
+    Raises:
+        HTTPException: If path traversal is detected or paths are invalid
+    """
+    abs_uploads_dir = os.path.abspath(uploads_dir)
+    abs_nested_dir = os.path.abspath(nested_dir)
+    try:
+        if os.path.commonpath([abs_uploads_dir, abs_nested_dir]) != abs_uploads_dir:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid relative path: path traversal detected in {relative_path}",
+            )
+    except ValueError:
+        # Paths have no common base (different drives on Windows or invalid paths)
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid relative path: path traversal detected in {relative_path}",
+        )
+
+
 async def _process_uploaded_files(
     files: List[UploadFile], uploads_dir: str, file_paths: Optional[List[str]] = None
 ) -> tuple[List[ImageData], int]:
@@ -395,24 +423,8 @@ async def _process_uploaded_files(
             if rel_dir:
                 # Create nested directory structure with path traversal protection
                 nested_dir = os.path.join(uploads_dir, rel_dir)
-                # Path traversal protection: ensure nested_dir is within uploads_dir
-                abs_uploads_dir = os.path.abspath(uploads_dir)
-                abs_nested_dir = os.path.abspath(nested_dir)
-                try:
-                    if (
-                        os.path.commonpath([abs_uploads_dir, abs_nested_dir])
-                        != abs_uploads_dir
-                    ):
-                        raise HTTPException(
-                            status_code=400,
-                            detail=f"Invalid relative path: path traversal detected in {relative_path}",
-                        )
-                except ValueError:
-                    # Paths have no common base (different drives on Windows or invalid paths)
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"Invalid relative path: path traversal detected in {relative_path}",
-                    )
+                # Validate path safety using helper function
+                _validate_safe_path(uploads_dir, nested_dir, relative_path)
                 os.makedirs(nested_dir, exist_ok=True)
                 upload_path = os.path.join(nested_dir, secure_filename)
             else:

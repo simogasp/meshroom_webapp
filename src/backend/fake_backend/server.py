@@ -412,12 +412,8 @@ async def _process_uploaded_files(
             content=content,
             content_type=file.content_type or "application/octet-stream",
             size=file_size,
+            original_path=relative_path,  # Include original path in constructor
         )
-
-        # Add relative path information if available
-        if relative_path:
-            # Store original relative path for reference (not used in file operations)
-            image_data.original_path = relative_path
 
         images.append(image_data)
 

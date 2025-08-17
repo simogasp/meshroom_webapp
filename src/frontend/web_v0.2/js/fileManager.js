@@ -197,21 +197,23 @@ class FileManager {
     };
 
     try {
-      const entries = await readEntries();
-      
-      for (const entry of entries) {
-        if (entry.isFile) {
-          const file = await this.getFileFromEntry(entry);
-          if (file) {
-            // Add directory path information to the file
-            file.relativePath = this.getRelativePath(entry);
-            files.push(file);
+      let entries = [];
+      do {
+        entries = await readEntries();
+        for (const entry of entries) {
+          if (entry.isFile) {
+            const file = await this.getFileFromEntry(entry);
+            if (file) {
+              // Add directory path information to the file
+              file.relativePath = entry.fullPath;
+              files.push(file);
+            }
+          } else if (entry.isDirectory) {
+            const subFiles = await this.readDirectoryRecursively(entry);
+            files.push(...subFiles);
           }
-        } else if (entry.isDirectory) {
-          const subFiles = await this.readDirectoryRecursively(entry);
-          files.push(...subFiles);
         }
-      }
+      } while (entries.length > 0);
     } catch (error) {
       console.error('Error reading directory:', error);
     }
@@ -228,24 +230,6 @@ class FileManager {
     return new Promise((resolve, reject) => {
       fileEntry.file(resolve, reject);
     });
-  }
-
-  /**
-   * Get relative path from file entry
-   * @param {FileSystemEntry} entry - File system entry
-   * @returns {string} Relative path
-   */
-  getRelativePath(entry) {
-    const pathParts = [];
-    let current = entry;
-    
-    // Build path by walking up the directory structure
-    while (current && current.name) {
-      pathParts.unshift(current.name);
-      current = current.filesystem; // This approach has limitations
-    }
-    
-    return pathParts.join('/');
   }
 
   /**

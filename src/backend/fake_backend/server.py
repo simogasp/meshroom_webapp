@@ -412,7 +412,7 @@ async def _process_uploaded_files(
             content=content,
             content_type=file.content_type or "application/octet-stream",
             size=file_size,
-            original_path=relative_path,  # Include original path in constructor
+            original_path=relative_path,  # Named parameter for clarity
         )
 
         images.append(image_data)

@@ -23,6 +23,7 @@ class FileManager {
 
     this.selectedFiles = [];
     this.fileMap = new Map(); // Map to track files by unique ID
+    this.fileRelativePaths = new WeakMap(); // Store relative paths for files
     this.fileCounter = 0;
     
     this.init();
@@ -144,6 +145,64 @@ class FileManager {
   }
 
   /**
+   * Build error message for rejected and duplicate files
+   * @param {Array} rejectedFiles - Array of rejected files with reasons
+   * @param {Array} duplicateFiles - Array of duplicate files
+   * @param {Array} validFiles - Array of valid files
+   * @param {Array} directoryNames - Array of directory names for context
+   * @returns {Object} Error message object
+   */
+  buildErrorMessage(rejectedFiles, duplicateFiles, validFiles, directoryNames = []) {
+    let errorMessage = '';
+    const errorDetails = [];
+
+    if (directoryNames.length > 0) {
+      const dirText = directoryNames.length === 1 ? 'directory' : 'directories';
+      errorMessage = `From ${directoryNames.length} ${dirText} (${directoryNames.join(', ')}): `;
+    }
+
+    if (rejectedFiles.length > 0) {
+      errorMessage += `${rejectedFiles.length} file${rejectedFiles.length !== 1 ? 's' : ''} rejected`;
+      rejectedFiles.forEach(({ file, reason }) => {
+        const path = this.getFileDisplayPath(file);
+        errorDetails.push(`❌ "${path}" - ${reason}`);
+      });
+    }
+
+    if (duplicateFiles.length > 0) {
+      if (errorMessage && !errorMessage.endsWith(': ')) {
+        errorMessage += ` and ${duplicateFiles.length} duplicate${duplicateFiles.length !== 1 ? 's' : ''} skipped`;
+      } else {
+        errorMessage += `${duplicateFiles.length} duplicate file${duplicateFiles.length !== 1 ? 's' : ''} skipped`;
+      }
+      
+      duplicateFiles.forEach(file => {
+        const path = this.getFileDisplayPath(file);
+        errorDetails.push(`⚠️ "${path}" - Already selected`);
+      });
+    }
+
+    if (validFiles.length > 0) {
+      errorMessage += `. ${validFiles.length} valid file${validFiles.length !== 1 ? 's' : ''} added.`;
+    }
+
+    return {
+      type: 'validation_errors',
+      message: errorMessage,
+      details: errorDetails
+    };
+  }
+
+  /**
+   * Get display path for a file (relative path or file name)
+   * @param {File} file - File object
+   * @returns {string} Display path
+   */
+  getFileDisplayPath(file) {
+    return this.fileRelativePaths.get(file) || file.webkitRelativePath || file.name;
+  }
+
+  /**
    * Handle dropped items (files and directories)
    * @param {DataTransferItemList} items - Dropped items
    */
@@ -180,6 +239,17 @@ class FileManager {
   }
 
   /**
+   * Read entries from directory reader
+   * @param {FileSystemDirectoryReader} reader - Directory reader
+   * @returns {Promise<Array>} Promise resolving to array of entries
+   */
+  static async readEntries(reader) {
+    return new Promise((resolve, reject) => {
+      reader.readEntries(resolve, reject);
+    });
+  }
+
+  /**
    * Recursively read files from a directory entry
    * @param {FileSystemDirectoryEntry} directoryEntry - Directory entry
    * @returns {Promise<File[]>} Promise resolving to array of files
@@ -188,23 +258,17 @@ class FileManager {
     const files = [];
 
     const reader = directoryEntry.createReader();
-    
-    const readEntries = () => {
-      return new Promise((resolve, reject) => {
-        reader.readEntries(resolve, reject);
-      });
-    };
 
     try {
       let entries = [];
       do {
-        entries = await readEntries();
+        entries = await FileManager.readEntries(reader);
         for (const entry of entries) {
           if (entry.isFile) {
             const file = await this.getFileFromEntry(entry);
             if (file) {
-              // Add directory path information to the file
-              file.relativePath = entry.fullPath;
+              // Associate directory path information with the file using WeakMap
+              this.fileRelativePaths.set(file, entry.fullPath);
               files.push(file);
             }
           } else if (entry.isDirectory) {
@@ -318,41 +382,8 @@ class FileManager {
 
     // Build detailed error message with directory context
     if (rejectedFiles.length > 0 || duplicateFiles.length > 0) {
-      let errorMessage = '';
-      const errorDetails = [];
-
-      if (directoryNames.length > 0) {
-        const dirText = directoryNames.length === 1 ? 'directory' : 'directories';
-        errorMessage = `From ${directoryNames.length} ${dirText} (${directoryNames.join(', ')}): `;
-      }
-
-      if (rejectedFiles.length > 0) {
-        errorMessage += `${rejectedFiles.length} file${rejectedFiles.length !== 1 ? 's' : ''} rejected`;
-        rejectedFiles.forEach(({ file, reason }) => {
-          const path = file.webkitRelativePath || file.relativePath || file.name;
-          errorDetails.push(`❌ "${path}" - ${reason}`);
-        });
-      }
-
-      if (duplicateFiles.length > 0) {
-        if (errorMessage && !errorMessage.endsWith(': ')) errorMessage += ` and ${duplicateFiles.length} duplicate${duplicateFiles.length !== 1 ? 's' : ''} skipped`;
-        else errorMessage += `${duplicateFiles.length} duplicate file${duplicateFiles.length !== 1 ? 's' : ''} skipped`;
-        
-        duplicateFiles.forEach(file => {
-          const path = file.webkitRelativePath || file.relativePath || file.name;
-          errorDetails.push(`⚠️ "${path}" - Already selected`);
-        });
-      }
-
-      if (validFiles.length > 0) {
-        errorMessage += `. ${validFiles.length} valid file${validFiles.length !== 1 ? 's' : ''} added.`;
-      }
-
-      this.options.onError({
-        type: 'validation_errors',
-        message: errorMessage,
-        details: errorDetails
-      });
+      const errorInfo = this.buildErrorMessage(rejectedFiles, duplicateFiles, validFiles, directoryNames);
+      this.options.onError(errorInfo);
     }
 
     // Add valid files
@@ -411,34 +442,8 @@ class FileManager {
 
     // Build detailed error message if there are rejected or duplicate files
     if (rejectedFiles.length > 0 || duplicateFiles.length > 0) {
-      let errorMessage = '';
-      const errorDetails = [];
-
-      if (rejectedFiles.length > 0) {
-        errorMessage = `${rejectedFiles.length} file${rejectedFiles.length !== 1 ? 's' : ''} rejected`;
-        rejectedFiles.forEach(({ file, reason }) => {
-          errorDetails.push(`❌ "${file.name}" - ${reason}`);
-        });
-      }
-
-      if (duplicateFiles.length > 0) {
-        if (errorMessage) errorMessage += ` and ${duplicateFiles.length} duplicate${duplicateFiles.length !== 1 ? 's' : ''} skipped`;
-        else errorMessage = `${duplicateFiles.length} duplicate file${duplicateFiles.length !== 1 ? 's' : ''} skipped`;
-        
-        duplicateFiles.forEach(file => {
-          errorDetails.push(`⚠️ "${file.name}" - Already selected`);
-        });
-      }
-
-      if (validFiles.length > 0) {
-        errorMessage += `. ${validFiles.length} valid file${validFiles.length !== 1 ? 's' : ''} added.`;
-      }
-
-      this.options.onError({
-        type: 'validation_errors',
-        message: errorMessage,
-        details: errorDetails
-      });
+      const errorInfo = this.buildErrorMessage(rejectedFiles, duplicateFiles, validFiles);
+      this.options.onError(errorInfo);
     }
 
     // Add valid files
@@ -526,7 +531,6 @@ class FileManager {
       size: file.size,
       type: file.type,
       lastModified: file.lastModified,
-      relativePath: file.webkitRelativePath || file.relativePath || null,
       previewUrl: null,
       metadata: null
     };
@@ -651,7 +655,7 @@ class FileManager {
       : '';
 
     // Show relative path if file comes from a directory
-    const displayName = fileData.relativePath || fileData.name;
+    const displayName = this.getFileDisplayPath(fileData.file);
     const truncatedName = this.truncateFileName(displayName);
 
     previewElement.innerHTML = `

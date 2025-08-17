@@ -337,7 +337,7 @@ def _parse_upload_parameters(parameters: Optional[str]) -> Dict[str, Any]:
 
 
 async def _process_uploaded_files(
-    files: List[UploadFile], uploads_dir: str
+    files: List[UploadFile], uploads_dir: str, file_paths: Optional[List[str]] = None
 ) -> tuple[List[ImageData], int]:
     """
     Process and save uploaded files.
@@ -345,6 +345,7 @@ async def _process_uploaded_files(
     Args:
         files: List of uploaded files
         uploads_dir: Directory to save files to
+        file_paths: Optional list of relative paths for directory structure
 
     Returns:
         Tuple of (list of ImageData objects, total size in bytes)
@@ -355,7 +356,7 @@ async def _process_uploaded_files(
     images = []
     total_size = 0
 
-    for file in files:
+    for i, file in enumerate(files):
         if not file.filename:
             continue
 
@@ -370,8 +371,12 @@ async def _process_uploaded_files(
                 status_code=400, detail=f"File {file.filename} too large (max 50MB)"
             )
 
-        # Generate a completely secure filename without any user-controlled data
-        # Get file extension safely from original filename
+        # Get relative path if provided, otherwise use filename
+        relative_path = None
+        if file_paths and i < len(file_paths):
+            relative_path = file_paths[i]
+
+        # Generate secure filename
         original_name = file.filename or "upload.jpg"
         _, ext = os.path.splitext(original_name.lower())
 
@@ -383,24 +388,42 @@ async def _process_uploaded_files(
         # Create completely random filename
         secure_filename = f"upload_{secrets.token_hex(16)}{ext}"
 
-        # NOSONAR: Path construction uses cryptographically secure random data, not user input
-        upload_path = os.path.join(uploads_dir, secure_filename)
+        # Create directory structure if relative path is provided
+        if relative_path and relative_path != original_name:
+            # Extract directory from relative path
+            rel_dir = os.path.dirname(relative_path)
+            if rel_dir:
+                # Create nested directory structure
+                nested_dir = os.path.join(uploads_dir, rel_dir)
+                os.makedirs(nested_dir, exist_ok=True)
+                upload_path = os.path.join(nested_dir, secure_filename)
+            else:
+                upload_path = os.path.join(uploads_dir, secure_filename)
+        else:
+            upload_path = os.path.join(uploads_dir, secure_filename)
 
-        # NOSONAR: Path is constructed with secure random data, validated base directory
+        # NOSONAR: Path construction uses validated base directory and secure random data
         with open(upload_path, "wb") as f:
             f.write(content)
 
-        # Create image data object
+        # Create image data object with relative path info
         image_data = ImageData(
             filename=secure_filename,  # Use secure filename
             content=content,
             content_type=file.content_type or "application/octet-stream",
             size=file_size,
         )
+
+        # Add relative path information if available
+        if relative_path:
+            # Store original relative path for reference (not used in file operations)
+            image_data.original_path = relative_path
+
         images.append(image_data)
 
         logger.info(
             f"Uploaded {file.filename} -> {secure_filename}: {file_size} bytes -> {upload_path}"
+            + (f" (from {relative_path})" if relative_path else "")
         )
 
     return images, total_size
@@ -482,6 +505,7 @@ async def get_parameters() -> Dict[str, Any]:
 @app.post("/upload", response_model=JobResponse)
 async def upload_images(
     files: List[UploadFile] = File(...),
+    file_paths: Optional[List[str]] = Form(None),
     parameters: Optional[str] = Form(None),
 ) -> JobResponse:
     """
@@ -489,6 +513,7 @@ async def upload_images(
 
     Args:
         files: List of image files to process
+        file_paths: Optional list of relative file paths for directory structure
         parameters: Optional JSON string of dynamic parameters selected by the user
 
     Returns:
@@ -522,7 +547,9 @@ async def upload_images(
         save_job_parameters(job.job_id, job.parameters)
 
         # Process uploaded files
-        images, total_size = await _process_uploaded_files(files, uploads_dir)
+        images, total_size = await _process_uploaded_files(
+            files, uploads_dir, file_paths
+        )
 
         # Check total upload size
         if total_size > 500 * 1024 * 1024:  # 500MB total

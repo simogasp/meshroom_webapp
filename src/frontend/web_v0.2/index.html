@@ -65,15 +65,20 @@
                         <div class="dropzone-content">
                             <div class="dropzone-icon">📁</div>
                             <p id="uploadText" class="dropzone-text">
-                                <strong>Drag and drop your images here</strong>
+                                <strong>Drag and drop your images or folders here</strong>
                                 <br>or
                             </p>
-                            <button id="selectFilesBtn" class="btn btn-primary">
-                                Select Files
-                            </button>
+                            <div class="upload-buttons">
+                                <button id="selectFilesBtn" class="btn btn-primary">
+                                    Select Files
+                                </button>
+                                <button id="selectFolderBtn" class="btn btn-secondary">
+                                    Select Folder
+                                </button>
+                            </div>
                             <input type="file" id="fileInput" accept="image/*" multiple hidden>
                             <p id="uploadSubtext" class="dropzone-hint">
-                                Supports JPEG, PNG, TIFF, WebP formats. Max 100MB per file.
+                                Supports JPEG, PNG, TIFF, WebP formats. Max 100MB per file. Drag folders for bulk upload.
                             </p>
                         </div>
                         

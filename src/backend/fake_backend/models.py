@@ -48,6 +48,7 @@ class ImageData:
     content_type: str
     size: int
     upload_time: datetime = field(default_factory=datetime.now)
+    original_path: Optional[str] = None  # For directory structure preservation
 
     @property
     def size_mb(self) -> float:

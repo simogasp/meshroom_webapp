@@ -217,9 +217,17 @@ export class ApiClient {
     try {
       const formData = new FormData();
 
-      // Add files to FormData
-      files.forEach((file) => {
+      // Add files to FormData with their relative paths if available
+      files.forEach((file, index) => {
         formData.append('files', file);
+        
+        // Send relative path information if file has directory structure
+        const relativePath = file.webkitRelativePath || file.relativePath;
+        if (relativePath) {
+          formData.append(`file_paths`, relativePath);
+        } else {
+          formData.append(`file_paths`, file.name);
+        }
       });
 
       // Always include full dynamic parameters payload for the backend

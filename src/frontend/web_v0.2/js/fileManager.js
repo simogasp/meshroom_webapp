@@ -150,7 +150,8 @@ class FileManager {
     }
 
     const validFiles = [];
-    const errors = [];
+    const rejectedFiles = [];
+    const duplicateFiles = [];
 
     // Validate each file
     fileArray.forEach(file => {
@@ -164,19 +165,45 @@ class FileManager {
         if (!isDuplicate) {
           validFiles.push(file);
         } else {
-          errors.push(`File "${file.name}" is already selected`);
+          duplicateFiles.push(file);
         }
       } else {
-        errors.push(`${file.name}: ${validation.error}`);
+        rejectedFiles.push({
+          file: file,
+          reason: validation.error
+        });
       }
     });
 
-    // Show errors if any
-    if (errors.length > 0) {
+    // Build detailed error message if there are rejected or duplicate files
+    if (rejectedFiles.length > 0 || duplicateFiles.length > 0) {
+      let errorMessage = '';
+      const errorDetails = [];
+
+      if (rejectedFiles.length > 0) {
+        errorMessage = `${rejectedFiles.length} file${rejectedFiles.length !== 1 ? 's' : ''} rejected`;
+        rejectedFiles.forEach(({ file, reason }) => {
+          errorDetails.push(`❌ "${file.name}" - ${reason}`);
+        });
+      }
+
+      if (duplicateFiles.length > 0) {
+        if (errorMessage) errorMessage += ` and ${duplicateFiles.length} duplicate${duplicateFiles.length !== 1 ? 's' : ''} skipped`;
+        else errorMessage = `${duplicateFiles.length} duplicate file${duplicateFiles.length !== 1 ? 's' : ''} skipped`;
+        
+        duplicateFiles.forEach(file => {
+          errorDetails.push(`⚠️ "${file.name}" - Already selected`);
+        });
+      }
+
+      if (validFiles.length > 0) {
+        errorMessage += `. ${validFiles.length} valid file${validFiles.length !== 1 ? 's' : ''} added.`;
+      }
+
       this.options.onError({
         type: 'validation_errors',
-        message: `Some files were rejected:`,
-        details: errors
+        message: errorMessage,
+        details: errorDetails
       });
     }
 
@@ -199,11 +226,36 @@ class FileManager {
    * @returns {Object} Validation result
    */
   validateFile(file) {
-    // Check file type
-    if (!this.options.allowedTypes.includes(file.type)) {
+    // Check if file is actually an image by type
+    if (!file.type.startsWith('image/')) {
+      // Provide more specific error for common non-image file types
+      const extension = file.name.split('.').pop()?.toLowerCase();
+      const commonTypes = {
+        'pdf': 'PDF documents',
+        'doc': 'Word documents', 'docx': 'Word documents',
+        'txt': 'text files',
+        'mp4': 'videos', 'avi': 'videos', 'mov': 'videos', 'mkv': 'videos',
+        'mp3': 'audio files', 'wav': 'audio files', 'flac': 'audio files',
+        'zip': 'archives', 'rar': 'archives', '7z': 'archives',
+        'exe': 'executable files',
+        'js': 'code files', 'html': 'code files', 'css': 'code files', 'py': 'code files'
+      };
+      
+      const typeDescription = commonTypes[extension] || 'non-image files';
       return {
         valid: false,
-        error: `Invalid file type. Allowed: ${this.options.allowedTypes.join(', ')}`
+        error: `Not an image file (${typeDescription} are not supported)`
+      };
+    }
+
+    // Check if file type is in allowed list
+    if (!this.options.allowedTypes.includes(file.type)) {
+      const supportedFormats = this.options.allowedTypes
+        .map(type => type.replace('image/', '').toUpperCase())
+        .join(', ');
+      return {
+        valid: false,
+        error: `Unsupported image format. Supported: ${supportedFormats}`
       };
     }
 
@@ -211,15 +263,15 @@ class FileManager {
     if (file.size > this.options.maxFileSize) {
       return {
         valid: false,
-        error: `File too large. Max size: ${this.formatFileSize(this.options.maxFileSize)}`
+        error: `File too large (${this.formatFileSize(file.size)}). Max: ${this.formatFileSize(this.options.maxFileSize)}`
       };
     }
 
-    // Check if file is actually an image
-    if (!file.type.startsWith('image/')) {
+    // Check for empty files
+    if (file.size === 0) {
       return {
         valid: false,
-        error: 'Please select a valid image file'
+        error: 'Empty file (0 bytes)'
       };
     }
 

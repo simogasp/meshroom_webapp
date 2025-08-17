@@ -671,13 +671,31 @@ export class App {
       this.components.modal.showModal({
         type: 'error',
         title: title,
-        message: message,
-        buttons: ['OK']
+        content: `<div class="error-message">${this.escapeHtml(message)}</div>`,
+        actions: [
+          {
+            text: 'OK',
+            variant: 'primary',
+            action: () => true,
+            autoFocus: true
+          }
+        ]
       });
     } else {
       // Fallback to alert if modal is not available
       alert(`${title}: ${message}`);
     }
+  }
+
+  /**
+   * Escape HTML characters to prevent XSS attacks
+   * @param {string} text - Text to escape
+   * @returns {string} Escaped text
+   */
+  escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
   }
 
   /**

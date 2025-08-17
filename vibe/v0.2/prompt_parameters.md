@@ -2,7 +2,7 @@
 
 We want to extend the existing fake backend (v0.1) and web frontend (v0.2) with a new feature: **dynamic job parameters loaded from a JSON config file**.
 
-### Requirements
+## Requirements
 
 1. **Parameter Specification File**
 
@@ -93,8 +93,9 @@ We want to extend the existing fake backend (v0.1) and web frontend (v0.2) with 
           ]
         }
      ```
-   
+
    * The json file follows the schema specified in this `parameters.schema.json`:
+
     ```json
        {
           "$schema":"http://json-schema.org/draft-07/schema#",
@@ -204,11 +205,14 @@ We want to extend the existing fake backend (v0.1) and web frontend (v0.2) with 
       ```bash
       python tests/run_tests.py --quality
       ```
+
      which also have a `--fix` option to automatically fix the issues where possible.
    * More generally, ensure that the integration tests pass when modifying the server code:
+
      ```bash
       python tests/run_tests.py --integration
       ```
+
    * Check that after all changes all the front ends still work.
    * `./start_fake_backend.sh` allows you to start the fake backend.
 

@@ -205,9 +205,11 @@ class FileManager {
   }
 
   /**
-   * Get display path for a file (relative path or file name)
-   * @param {File} file - File object
-   * @returns {string} Display path
+   * Get the display path for a file, using multiple fallback strategies.
+   * Returns the file's relative path if available (e.g., from directory selection or drag-and-drop),
+   * otherwise falls back to a stored relative path, and finally to the file's name.
+   * @param {File} file - The file object to get the display path for.
+   * @returns {string} The display path for the file.
    */
   getFileDisplayPath(file) {
     return file.webkitRelativePath || this.fileRelativePaths.get(file) || file.name;
@@ -300,7 +302,8 @@ class FileManager {
               if (typeof this.options.onError === 'function') {
                 this.options.onError({
                   type: 'file_read_error',
-                  message: `Failed to read file "${entry.fullPath}" from directory "${directoryEntry.name}": ${error.message}`,
+                  message: `Failed to read file "${entry.fullPath}" from directory "${directoryEntry.name}": ${error.message || 'Unknown error'}`,
+                  details: [`Directory: ${directoryEntry.name}`, `File: ${entry.fullPath}`, `Error Type: ${error.name || 'FileReadError'}`],
                   entry: entry,
                   directory: directoryEntry.name,
                   errorType: error.name || 'FileReadError'
@@ -516,7 +519,9 @@ class FileManager {
         'js': 'code files', 'html': 'code files', 'css': 'code files', 'py': 'code files'
       };
       
-      const typeDescription = commonTypes[extension] || 'non-image files';
+      const typeDescription = Object.prototype.hasOwnProperty.call(commonTypes, extension) 
+        ? commonTypes[extension] 
+        : 'non-image files';
       return {
         valid: false,
         error: `Not an image file (${typeDescription} are not supported)`

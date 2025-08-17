@@ -348,8 +348,8 @@ def _validate_safe_path(uploads_dir: str, nested_dir: str, relative_path: str) -
     Raises:
         HTTPException: If path traversal is detected or paths are invalid
     """
-    abs_uploads_dir = os.path.abspath(uploads_dir)
-    abs_nested_dir = os.path.abspath(nested_dir)
+    abs_uploads_dir = os.path.realpath(uploads_dir)
+    abs_nested_dir = os.path.realpath(nested_dir)
     try:
         if os.path.commonpath([abs_uploads_dir, abs_nested_dir]) != abs_uploads_dir:
             raise HTTPException(
@@ -442,7 +442,7 @@ async def _process_uploaded_files(
             content=content,
             content_type=file.content_type or "application/octet-stream",
             size=file_size,
-            original_path=relative_path,  # Named parameter for clarity
+            original_path=relative_path,
         )
 
         images.append(image_data)

@@ -38,7 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Project root path detection with relative path calculation
   - OSError handling for robust directory operations
 
-- Dynamic Parameters feature (server and web client):
+- Dynamic Parameters feature (server and web client) [PR#8](https://github.com/simogasp/meshroom_webapp/pull/8):
   - Server now loads and validates `parameters.json` at startup and exposes `GET /parameters`.
   - `POST /upload` accepts an additional `parameters` JSON field with dynamic user-selected values.
   - Parameters are persisted per job under `output/backend/fake_backend/{job_id}/parameters.json`.
@@ -51,19 +51,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Helpers to create job folders and persist parameters.
   - Job result file path is recorded after model generation.
 
+- **Directory Upload Support** [PR#9](https://github.com/simogasp/meshroom_webapp/pull/9)
+  - Directory Selection: Users can select entire folders using the 'Select Folder' button
+  - Drag & Drop Folders: Full support for dragging and dropping directories
+  - Recursive File Collection: Automatically finds all image files in nested subdirectories
+
 ### Changed
 
 - Standardized output structure under `output/backend/fake_backend/{job_id}/(uploads|models)`.
 - Frontend web v0.2 now uses dynamic parameters instead of hardcoded definitions when available.
-- `.gitignore` updated to exclude generated `output/` directories and artifacts.
 
 ### Fixed
 
 - Improved robustness of model download flow by ensuring the server records the generated model path when serving the file and the client retries on transient readiness races.
-
-### Security
-
-- Security test scripts and CI steps remain as separate jobs; artifacts are uploaded via CI for visibility.
 
 ## [v0.1] - 2025-08-14
 

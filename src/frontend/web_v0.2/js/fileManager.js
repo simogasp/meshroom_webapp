@@ -173,7 +173,6 @@ class FileManager {
 
     // If directories were processed, show a different message
     if (directoryNames.length > 0) {
-      console.log(`Processing ${directoryNames.length} directories: ${directoryNames.join(', ')}`);
       this.handleDirectoryFiles(allFiles, directoryNames);
     } else {
       this.handleFileSelect(allFiles);

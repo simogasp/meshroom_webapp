@@ -114,6 +114,7 @@ open src/frontend/web_api_tester/web_test.html
 ### Upload Parameters
 
 - Provide a JSON object in the **Parameters (JSON)** textarea, for example:
+
   ```json
   {
     "quality": "medium",
@@ -121,6 +122,7 @@ open src/frontend/web_api_tester/web_test.html
     "optimizeForWeb": true
   }
   ```
+
 - If omitted, the backend uses defaults from its `parameters.json` file.
 - The available parameters and defaults can be retrieved via `GET /parameters`.
 

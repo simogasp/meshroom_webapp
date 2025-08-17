@@ -298,6 +298,114 @@ def save_job_parameters(job_id: str, parameters: Dict[str, Any]) -> str:
     return parameters_path
 
 
+def _parse_upload_parameters(parameters: Optional[str]) -> Dict[str, Any]:
+    """
+    Parse dynamic parameters from the upload request.
+
+    Args:
+        parameters: Optional JSON string of dynamic parameters
+
+    Returns:
+        Dictionary of parsed parameters with defaults filled in
+
+    Raises:
+        HTTPException: If parameters are invalid
+    """
+    dynamic_params: Dict[str, Any] = {}
+    if parameters:
+        try:
+            parsed = json.loads(parameters)
+            if isinstance(parsed, dict):
+                dynamic_params = parsed
+            else:
+                raise ValueError("'parameters' must be a JSON object")
+        except (json.JSONDecodeError, ValueError) as e:
+            raise HTTPException(status_code=400, detail=f"Invalid parameters: {e}")
+    else:
+        # Fill defaults from loaded parameters config
+        global _parameters_config
+        if not _parameters_config:
+            try:
+                _load_parameters_config()
+            except (FileNotFoundError, ValueError, json.JSONDecodeError):
+                _parameters_config = {"parameters": []}
+        for p in _parameters_config.get("parameters", []):
+            if "name" in p and "default" in p:
+                dynamic_params[p["name"]] = p["default"]
+
+    return dynamic_params
+
+
+async def _process_uploaded_files(
+    files: List[UploadFile], uploads_dir: str
+) -> tuple[List[ImageData], int]:
+    """
+    Process and save uploaded files.
+
+    Args:
+        files: List of uploaded files
+        uploads_dir: Directory to save files to
+
+    Returns:
+        Tuple of (list of ImageData objects, total size in bytes)
+
+    Raises:
+        HTTPException: If file processing fails
+    """
+    images = []
+    total_size = 0
+
+    for file in files:
+        if not file.filename:
+            continue
+
+        # Read file content
+        content = await file.read()
+        file_size = len(content)
+        total_size += file_size
+
+        # Check file size limits
+        if file_size > 50 * 1024 * 1024:  # 50MB per file
+            raise HTTPException(
+                status_code=400, detail=f"File {file.filename} too large (max 50MB)"
+            )
+
+        # Generate a completely secure filename without any user-controlled data
+        # Get file extension safely from original filename
+        original_name = file.filename or "upload.jpg"
+        _, ext = os.path.splitext(original_name.lower())
+
+        # Only allow specific image extensions
+        allowed_extensions = {".jpg", ".jpeg", ".png", ".tiff", ".tif", ".webp"}
+        if ext not in allowed_extensions:
+            ext = ".jpg"  # default to jpg
+
+        # Create completely random filename
+        secure_filename = f"upload_{secrets.token_hex(16)}{ext}"
+
+        # NOSONAR: Path construction uses cryptographically secure random data, not user input
+        upload_path = os.path.join(uploads_dir, secure_filename)
+
+        # NOSONAR: Path is constructed with secure random data, validated base directory
+        with open(upload_path, "wb") as f:
+            f.write(content)
+
+        # Create image data object
+        image_data = ImageData(
+            filename=secure_filename,  # Use secure filename
+            content=content,
+            content_type=file.content_type or "application/octet-stream",
+            size=file_size,
+        )
+        images.append(image_data)
+
+        logger.info(
+            f"Uploaded {file.filename} -> {secure_filename}: {file_size} bytes -> {upload_path}"
+        )
+
+    return images, total_size
+
+
 @app.on_event("startup")
 async def startup_event() -> None:
     """Initialize application on startup."""
@@ -311,7 +419,7 @@ async def startup_event() -> None:
         logger.info(
             f"Loaded dynamic parameters: {len(cfg.get('parameters', []))} definitions"
         )
-    except Exception as e:
+    except (FileNotFoundError, ValueError, json.JSONDecodeError) as e:
         logger.warning(f"Parameters configuration not loaded: {e}")
 
 
@@ -364,7 +472,7 @@ async def get_parameters() -> Dict[str, Any]:
     if not _parameters_config:
         try:
             _load_parameters_config()
-        except Exception as e:
+        except (FileNotFoundError, ValueError, json.JSONDecodeError) as e:
             logger.error(f"Failed to load parameters: {e}")
             raise HTTPException(status_code=500, detail="Parameters not available")
 
@@ -391,27 +499,7 @@ async def upload_images(
     """
     try:
         # Parse dynamic parameters if present; if missing, use defaults from config
-        dynamic_params: Dict[str, Any] = {}
-        if parameters:
-            try:
-                parsed = json.loads(parameters)
-                if isinstance(parsed, dict):
-                    dynamic_params = parsed
-                else:
-                    raise ValueError("'parameters' must be a JSON object")
-            except (json.JSONDecodeError, ValueError) as e:
-                raise HTTPException(status_code=400, detail=f"Invalid parameters: {e}")
-        else:
-            # Fill defaults from loaded parameters config
-            global _parameters_config
-            if not _parameters_config:
-                try:
-                    _load_parameters_config()
-                except Exception:
-                    _parameters_config = {"parameters": []}
-            for p in _parameters_config.get("parameters", []):
-                if "name" in p and "default" in p:
-                    dynamic_params[p["name"]] = p["default"]
+        dynamic_params = _parse_upload_parameters(parameters)
 
         if not files:
             raise HTTPException(status_code=400, detail="No files provided")
@@ -434,56 +522,7 @@ async def upload_images(
         save_job_parameters(job.job_id, job.parameters)
 
         # Process uploaded files
-        images = []
-        total_size = 0
-
-        for file in files:
-            if not file.filename:
-                continue
-
-            # Read file content
-            content = await file.read()
-            file_size = len(content)
-            total_size += file_size
-
-            # Check file size limits
-            if file_size > 50 * 1024 * 1024:  # 50MB per file
-                raise HTTPException(
-                    status_code=400, detail=f"File {file.filename} too large (max 50MB)"
-                )
-
-            # Generate a completely secure filename without any user-controlled data
-            # Get file extension safely from original filename
-            original_name = file.filename or "upload.jpg"
-            _, ext = os.path.splitext(original_name.lower())
-
-            # Only allow specific image extensions
-            allowed_extensions = {".jpg", ".jpeg", ".png", ".tiff", ".tif", ".webp"}
-            if ext not in allowed_extensions:
-                ext = ".jpg"  # default to jpg
-
-            # Create completely random filename
-            secure_filename = f"upload_{secrets.token_hex(16)}{ext}"
-
-            # NOSONAR: Path construction uses cryptographically secure random data, not user input
-            upload_path = os.path.join(uploads_dir, secure_filename)
-
-            # NOSONAR: Path is constructed with secure random data, validated base directory
-            with open(upload_path, "wb") as f:
-                f.write(content)
-
-            # Create image data object
-            image_data = ImageData(
-                filename=secure_filename,  # Use secure filename
-                content=content,
-                content_type=file.content_type or "application/octet-stream",
-                size=file_size,
-            )
-            images.append(image_data)
-
-            logger.info(
-                f"Uploaded {file.filename} -> {secure_filename}: {file_size} bytes -> {upload_path}"
-            )
+        images, total_size = await _process_uploaded_files(files, uploads_dir)
 
         # Check total upload size
         if total_size > 500 * 1024 * 1024:  # 500MB total
@@ -516,7 +555,7 @@ async def upload_images(
 
     except HTTPException:
         raise
-    except Exception as e:
+    except (OSError, IOError, ValueError) as e:
         logger.error(f"Upload failed: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
@@ -726,11 +765,11 @@ async def websocket_endpoint(websocket: WebSocket, job_id: str) -> None:
 
             except WebSocketDisconnect:
                 break
-            except Exception as e:
-                logger.warning(f"WebSocket error for {connection_id}: {e}")
+            except (ConnectionResetError, ConnectionAbortedError, OSError) as e:
+                logger.warning(f"WebSocket connection error for {connection_id}: {e}")
                 break
 
-    except Exception as e:
+    except (ConnectionResetError, ConnectionAbortedError, OSError) as e:
         logger.error(f"WebSocket connection failed: {e}")
 
     finally:
@@ -776,9 +815,6 @@ if __name__ == "__main__":
 
     # Set environment variable for configuration
     os.environ["USE_REAL_MODEL"] = str(args.real_model)
-
-    # Update global configuration
-    globals()["USE_REAL_MODEL"] = args.real_model
 
     # Configure logging level
     logging.getLogger().setLevel(getattr(logging, args.log_level.upper(), logging.INFO))

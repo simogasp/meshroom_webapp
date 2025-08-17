@@ -294,7 +294,8 @@ class FileManager {
               if (file) {
                 // Associate directory path information with the file using WeakMap
                 // Remove leading slash from fullPath for consistency with webkitRelativePath
-                this.fileRelativePaths.set(file, entry.fullPath.slice(1));
+                const relativePath = entry.fullPath.startsWith('/') ? entry.fullPath.slice(1) : entry.fullPath;
+                this.fileRelativePaths.set(file, relativePath);
                 files.push(file);
               }
             } catch (error) {
@@ -520,7 +521,7 @@ class FileManager {
       };
       
       const typeDescription = Object.prototype.hasOwnProperty.call(commonTypes, extension) 
-        ? commonTypes[extension] 
+        ? Object.prototype.hasOwnProperty.call(commonTypes, extension) && commonTypes[extension]
         : 'non-image files';
       return {
         valid: false,

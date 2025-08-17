@@ -335,10 +335,14 @@ export class App {
       // Get all selected file objects
       const fileObjects = this.state.selectedFiles.map(fileData => fileData.file);
       
+      // Get relative paths for each file from fileManager
+      const filePaths = fileObjects.map(file => this.components.fileManager.getFileDisplayPath(file));
+      
       // Upload files and start processing
       const jobId = await this.apiClient.startProcessing(
         fileObjects,
-        this.state.parameters
+        this.state.parameters,
+        filePaths
       );
       
       this.state.currentJobId = jobId;

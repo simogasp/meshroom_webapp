@@ -38,15 +38,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Project root path detection with relative path calculation
   - OSError handling for robust directory operations
 
+- Dynamic Parameters feature (server and web client):
+  - Server now loads and validates `parameters.json` at startup and exposes `GET /parameters`.
+  - `POST /upload` accepts an additional `parameters` JSON field with dynamic user-selected values.
+  - Parameters are persisted per job under `output/backend/fake_backend/{job_id}/parameters.json`.
+  - Web client v0.2 fetches `/parameters` on load and dynamically renders the parameter UI from the schema.
+  - Full parameter payload is sent with uploads.
+- Logging verbosity options:
+  - Backend: `--log-level {DEBUG,INFO,WARNING,ERROR}`.
+  - CLI client: `--verbose {DEBUG,INFO,WARNING,ERROR}`.
+- Output structure utilities:
+  - Helpers to create job folders and persist parameters.
+  - Job result file path is recorded after model generation.
+
 ### Changed
 
-### Deprecated
-
-### Removed
+- Standardized output structure under `output/backend/fake_backend/{job_id}/(uploads|models)`.
+- Frontend web v0.2 now uses dynamic parameters instead of hardcoded definitions when available.
+- `.gitignore` updated to exclude generated `output/` directories and artifacts.
 
 ### Fixed
 
+- Improved robustness of model download flow by ensuring the server records the generated model path when serving the file and the client retries on transient readiness races.
+
 ### Security
+
+- Security test scripts and CI steps remain as separate jobs; artifacts are uploaded via CI for visibility.
 
 ## [v0.1] - 2025-08-14
 

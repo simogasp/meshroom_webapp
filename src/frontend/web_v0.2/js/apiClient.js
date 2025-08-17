@@ -200,6 +200,14 @@ export class ApiClient {
   }
 
   /**
+   * Fetch dynamic processing parameters from the server
+   * @returns {Promise<Object>} Parameters configuration
+   */
+  async getParameters() {
+    return await this.request('/parameters');
+  }
+
+  /**
    * Start processing job
    * @param {File[]} files - Input files
    * @param {Object} parameters - Processing parameters
@@ -208,22 +216,25 @@ export class ApiClient {
   async startProcessing(files, parameters = {}) {
     try {
       const formData = new FormData();
-      
+
       // Add files to FormData
       files.forEach((file) => {
         formData.append('files', file);
       });
-      
-      // Add parameters to FormData
-      if (parameters.quality) {
-        formData.append('quality', parameters.quality);
+
+      // Backward-compatible legacy fields if present
+      if (parameters.quality !== undefined) {
+        formData.append('quality', String(parameters.quality));
       }
-      if (parameters.max_features) {
-        formData.append('max_features', parameters.max_features.toString());
+      if (parameters.max_features !== undefined) {
+        formData.append('max_features', String(parameters.max_features));
       }
       if (parameters.enable_gpu !== undefined) {
-        formData.append('enable_gpu', parameters.enable_gpu.toString());
+        formData.append('enable_gpu', String(parameters.enable_gpu));
       }
+
+      // Always include full dynamic parameters payload for the backend
+      formData.append('parameters', JSON.stringify(parameters));
 
       const result = await this.request('/upload', {
         method: 'POST',

@@ -1,0 +1,75 @@
+{
+  "$schema":"http://json-schema.org/draft-07/schema#",
+  "title":"Parameters Schema",
+  "description":"Schema for the specification of the parameters of the 3d reconstruction",
+  "type":"object",
+  "properties":{
+    "version":{
+      "type":"string"
+    },
+    "parameters":{
+      "type":"array",
+      "items":{
+        "type":"object",
+        "properties":{
+          "name":{
+            "type":"string"
+          },
+          "type":{
+            "type":"string",
+            "enum":[
+              "boolean",
+              "integer",
+              "float",
+              "string",
+              "enum"
+            ]
+          },
+          "description":{
+            "type":"string"
+          },
+          "values":{
+            "type":"array",
+            "items":{
+
+            }
+          },
+          "default":{
+
+          },
+          "required":{
+            "type":"boolean"
+          },
+          "advanced":{
+            "type":"boolean"
+          },
+          "min":{
+            "type":"number"
+          },
+          "max":{
+            "type":"number"
+          },
+          "step":{
+            "type":"number"
+          }
+        },
+        "required":[
+          "name",
+          "type",
+          "description",
+          "default",
+          "advanced"
+        ],
+        "dependentRequired":{
+          "min":[
+            "max"
+          ]
+        }
+      }
+    }
+  },
+  "required":[
+    "version",
+    "parameters"
+  ]
+}

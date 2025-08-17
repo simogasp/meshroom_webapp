@@ -692,4 +692,94 @@ export class ParameterPanel {
   isEnabled() {
     return this.isEnabled;
   }
+
+  /**
+   * Load parameter definitions from server configuration
+   * @param {Object} config - Server parameters config {version, parameters: []}
+   */
+  loadFromServer(config) {
+    if (!config || !Array.isArray(config.parameters)) {
+      return;
+    }
+
+    const toTitle = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+
+    const newDefs = {};
+    const advancedGroup = {
+      type: 'group',
+      label: 'Advanced Settings',
+      collapsed: true,
+      parameters: {}
+    };
+
+    config.parameters.forEach((p) => {
+      const uiDef = this._mapSchemaParamToUi(p);
+      if (p.advanced) {
+        advancedGroup.parameters[p.name] = uiDef;
+      } else {
+        newDefs[p.name] = uiDef;
+      }
+    });
+
+    // Only include advanced group if it has params
+    if (Object.keys(advancedGroup.parameters).length > 0) {
+      newDefs.advanced = advancedGroup;
+    }
+
+    this.parameterDefinitions = newDefs;
+
+    // Re-render with new definitions and set defaults
+    this.renderParameters();
+    this.setDefaultValues();
+  }
+
+  /**
+   * Map schema parameter to UI control definition
+   * @param {Object} p - Schema parameter
+   * @returns {Object} UI parameter definition
+   * @private
+   */
+  _mapSchemaParamToUi(p) {
+    const base = {
+      label: p.label || toStringSafe(p.name),
+      description: p.description || '',
+      required: !!p.required,
+      default: p.default
+    };
+
+    switch (p.type) {
+      case 'boolean':
+        return { ...base, type: 'checkbox' };
+      case 'integer':
+      case 'float': {
+        // Use slider if min/max are provided, else numeric input
+        if (typeof p.min !== 'undefined' && typeof p.max !== 'undefined') {
+          return {
+            ...base,
+            type: 'slider',
+            min: p.min,
+            max: p.max,
+            step: typeof p.step !== 'undefined' ? p.step : (p.type === 'integer' ? 1 : 0.1)
+          };
+        }
+        return {
+          ...base,
+          type: 'number',
+          step: typeof p.step !== 'undefined' ? p.step : (p.type === 'integer' ? 1 : 0.1)
+        };
+      }
+      case 'string':
+        return { ...base, type: 'text', placeholder: p.placeholder || '' };
+      case 'enum': {
+        const options = (p.values || []).map((v) => ({ value: v, label: String(v) }));
+        return { ...base, type: 'select', options };
+      }
+      default:
+        return { ...base, type: 'text' };
+    }
+
+    function toStringSafe(v) {
+      try { return String(v); } catch { return ''; }
+    }
+  }
 }

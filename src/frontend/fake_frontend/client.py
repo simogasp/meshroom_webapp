@@ -7,6 +7,7 @@ workflow, including image upload, progress monitoring via WebSocket,
 and model download.
 """
 
+import argparse
 import json
 import logging
 import os
@@ -17,7 +18,7 @@ from typing import Any, Dict, List, Optional
 import requests
 import websocket
 
-# Configure logging
+# Configure logging (will be adjusted in main based on --verbose)
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
@@ -103,6 +104,7 @@ class PhotogrammetryClient:
         quality: str = "medium",
         max_features: int = 1000,
         enable_gpu: bool = False,
+        extra_parameters: Optional[Dict[str, Any]] = None,
     ) -> Optional[str]:
         """
         Upload images to the backend for processing.
@@ -112,6 +114,7 @@ class PhotogrammetryClient:
             quality: Processing quality level
             max_features: Maximum number of features to extract
             enable_gpu: Whether to enable GPU acceleration
+            extra_parameters: Optional dynamic parameters to include
 
         Returns:
             Job ID if successful, None otherwise
@@ -125,16 +128,19 @@ class PhotogrammetryClient:
                 )
 
             # Prepare the form data
-            data = {
+            data: Dict[str, Any] = {
                 "quality": quality,
                 "max_features": max_features,
                 "enable_gpu": enable_gpu,
             }
 
+            # Include dynamic parameters as JSON if provided
+            if extra_parameters:
+                data["parameters"] = json.dumps(extra_parameters)
+
             logger.info(f"Uploading {len(images)} images to {self.base_url}/upload")
             logger.info(
-                f"Parameters: quality={quality}, "
-                f"max_features={max_features}, enable_gpu={enable_gpu}"
+                f"Parameters: quality={quality}, max_features={max_features}, enable_gpu={enable_gpu}"
             )
 
             # Send upload request
@@ -145,7 +151,7 @@ class PhotogrammetryClient:
             if response.status_code == 200:
                 result = response.json()
                 job_id: str = result["job_id"]
-                logger.info(f"Upload successful! Job ID: {job_id}")
+                logger.info(f"Upload successful. Job ID: {job_id}")
                 return job_id
             else:
                 logger.error(f"Upload failed: {response.status_code} - {response.text}")
@@ -354,7 +360,7 @@ class PhotogrammetryClient:
             ws.close()
 
             if completed:
-                logger.info("Job completed successfully!")
+                logger.info("Job completed successfully")
                 return True
             else:
                 logger.warning("Timeout waiting for job completion")
@@ -393,14 +399,14 @@ class PhotogrammetryClient:
             logger.info("Step 2: Uploading images...")
             job_id = self.upload_images(images, quality, max_features)
             if not job_id:
-                logger.error("Upload failed!")
+                logger.error("Upload failed")
                 return False
 
             # Step 3: Monitor progress
             logger.info("Step 3: Monitoring progress...")
             success = self.monitor_progress_websocket(job_id)
             if not success:
-                logger.error("Progress monitoring failed!")
+                logger.error("Progress monitoring failed")
                 return False
 
             # Step 4: Get final job status
@@ -415,11 +421,11 @@ class PhotogrammetryClient:
             logger.info("Step 5: Downloading 3D model...")
             model_path = self.download_model(job_id)
             if not model_path:
-                logger.error("Model download failed!")
+                logger.error("Model download failed")
                 return False
 
             logger.info("=" * 60)
-            logger.info("WORKFLOW COMPLETED SUCCESSFULLY!")
+            logger.info("WORKFLOW COMPLETED SUCCESSFULLY")
             logger.info(f"Model saved to: {model_path}")
             logger.info("=" * 60)
 
@@ -433,11 +439,44 @@ class PhotogrammetryClient:
 def main() -> None:
     """Main entry point for the CLI client."""
 
+    parser = argparse.ArgumentParser(
+        description="Fake Photogrammetry Client",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    parser.add_argument(
+        "--base-url", type=str, default="http://localhost:8000", help="Backend URL"
+    )
+    parser.add_argument(
+        "--images", type=int, default=8, help="Number of test images to generate"
+    )
+    parser.add_argument(
+        "--quality",
+        type=str,
+        default="high",
+        choices=["low", "medium", "high"],
+        help="Processing quality",
+    )
+    parser.add_argument(
+        "--max-features", type=int, default=2000, help="Maximum number of features"
+    )
+    parser.add_argument(
+        "--verbose",
+        type=str,
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        help="Logging verbosity level",
+    )
+
+    args = parser.parse_args()
+
+    # Setup logging level
+    logging.getLogger().setLevel(getattr(logging, args.verbose.upper(), logging.INFO))
+
     logger.info("Fake Photogrammetry Client v0.1.0")
     logger.info("=" * 50)
 
     # Check if backend is running
-    client = PhotogrammetryClient()
+    client = PhotogrammetryClient(args.base_url)
     try:
         response = requests.get(f"{client.base_url}/health", timeout=5)
         if response.status_code != 200:
@@ -451,16 +490,18 @@ def main() -> None:
         logger.info("  python server.py")
         return
 
-    logger.info("Backend is running and healthy!")
+    logger.info("Backend is running and healthy")
     logger.info("")
 
     # Run test workflow
-    success = client.run_test_workflow(image_count=8, quality="high", max_features=2000)
+    success = client.run_test_workflow(
+        image_count=args.images, quality=args.quality, max_features=args.max_features
+    )
 
     if success:
-        logger.info("\n✅ All tests passed!")
+        logger.info("All tests passed")
     else:
-        logger.error("\n❌ Some tests failed!")
+        logger.error("Some tests failed")
 
 
 if __name__ == "__main__":

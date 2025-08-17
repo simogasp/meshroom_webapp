@@ -42,6 +42,9 @@ export class App {
       this.setupEventListeners();
       this.loadSavedState();
       
+      // Load dynamic parameters from backend if available
+      this.loadDynamicParameters();
+
       // Set initial processing button state
       this.updateProcessingButtonState();
       
@@ -797,6 +800,22 @@ export class App {
       }
     } catch (error) {
       this.log('warning', 'Failed to load saved state from localStorage');
+    }
+  }
+
+  /**
+   * Fetch parameter definitions from backend and update panel
+   */
+  async loadDynamicParameters() {
+    try {
+      const config = await this.apiClient.getParameters();
+      if (config && config.parameters) {
+        this.components.parameterPanel?.loadFromServer(config);
+        this.log('info', 'Loaded dynamic parameters from server');
+      }
+    } catch (e) {
+      // Fallback to built-in defaults
+      this.log('warning', 'Dynamic parameters not available, using defaults');
     }
   }
 

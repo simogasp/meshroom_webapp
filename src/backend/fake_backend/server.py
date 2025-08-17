@@ -37,7 +37,7 @@ from fastapi.responses import FileResponse
 
 try:
     from .jobs import JobManager, generate_dummy_model, generate_real_model
-    from .models import ImageData, JobResponse, ProcessingJob, UploadRequest
+    from .models import ImageData, JobResponse, ProcessingJob
 except ImportError:
     # Handle direct execution
     from jobs import (  # type: ignore[no-redef]
@@ -45,12 +45,7 @@ except ImportError:
         generate_dummy_model,
         generate_real_model,
     )
-    from models import (  # type: ignore[no-redef]
-        ImageData,
-        JobResponse,
-        ProcessingJob,
-        UploadRequest,
-    )
+    from models import ImageData, JobResponse, ProcessingJob  # type: ignore[no-redef]
 
 
 # Configure logging
@@ -198,6 +193,51 @@ project_root = os.path.dirname(
 base_output_dir = os.path.join(project_root, "output", "backend", "fake_backend")
 os.makedirs(base_output_dir, exist_ok=True)
 
+# Dynamic parameters storage
+_parameters_config: Dict[str, Any] = {}
+
+
+def _load_parameters_config() -> Dict[str, Any]:
+    """
+    Load dynamic parameters configuration from JSON file.
+
+    Returns:
+        The parameters configuration dictionary.
+
+    Raises:
+        FileNotFoundError: If the parameters file is missing.
+        ValueError: If the parameters file is invalid.
+    """
+    global _parameters_config
+    # Parameters file lives alongside server code in this fake backend
+    params_path = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "parameters.json"
+    )
+
+    if not os.path.exists(params_path):
+        raise FileNotFoundError(f"parameters.json not found at {params_path}")
+
+    with open(params_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    # Basic validation according to documented schema (lightweight)
+    if not isinstance(data, dict) or "parameters" not in data:
+        raise ValueError("Invalid parameters.json format: missing 'parameters' array")
+
+    if not isinstance(data["parameters"], list):
+        raise ValueError("Invalid parameters.json: 'parameters' must be an array")
+
+    # Validate minimal fields for each parameter
+    for idx, p in enumerate(data["parameters"]):
+        if not isinstance(p, dict):
+            raise ValueError(f"Parameter at index {idx} is not an object")
+        for key in ["name", "type", "description", "default"]:
+            if key not in p:
+                raise ValueError(f"Parameter {p.get('name', idx)} missing '{key}'")
+
+    _parameters_config = data
+    return data
+
 
 def create_job_directories(job_id: str) -> Dict[str, str]:
     """
@@ -265,6 +305,14 @@ async def startup_event() -> None:
     logger.info("Starting Fake Photogrammetry Backend v0.1.0")
     logger.info(f"Model type: {model_type}")
     logger.info(f"Base output directory: {base_output_dir}")
+    # Load dynamic parameters
+    try:
+        cfg = _load_parameters_config()
+        logger.info(
+            f"Loaded dynamic parameters: {len(cfg.get('parameters', []))} definitions"
+        )
+    except Exception as e:
+        logger.warning(f"Parameters configuration not loaded: {e}")
 
 
 @app.on_event("shutdown")
@@ -303,21 +351,37 @@ async def health_check() -> Dict[str, str]:
     return {"status": "healthy", "timestamp": datetime.now().isoformat()}
 
 
+@app.get("/parameters")
+async def get_parameters() -> Dict[str, Any]:
+    """
+    Get dynamic processing parameter definitions.
+
+    Returns:
+        Parameters configuration loaded at startup.
+    """
+    # Lazy-load if not loaded yet
+    global _parameters_config
+    if not _parameters_config:
+        try:
+            _load_parameters_config()
+        except Exception as e:
+            logger.error(f"Failed to load parameters: {e}")
+            raise HTTPException(status_code=500, detail="Parameters not available")
+
+    return _parameters_config
+
+
 @app.post("/upload", response_model=JobResponse)
 async def upload_images(
     files: List[UploadFile] = File(...),
-    quality: str = Form("medium"),
-    max_features: int = Form(1000),
-    enable_gpu: bool = Form(False),
+    parameters: Optional[str] = Form(None),
 ) -> JobResponse:
     """
     Upload images for photogrammetry processing.
 
     Args:
         files: List of image files to process
-        quality: Processing quality level (low, medium, high)
-        max_features: Maximum number of features to extract
-        enable_gpu: Whether to enable GPU acceleration
+        parameters: Optional JSON string of dynamic parameters selected by the user
 
     Returns:
         Job response with job ID and status
@@ -326,10 +390,28 @@ async def upload_images(
         HTTPException: If validation fails or no files are provided
     """
     try:
-        # Validate request parameters
-        request_data = UploadRequest(
-            quality=quality, max_features=max_features, enable_gpu=enable_gpu
-        )
+        # Parse dynamic parameters if present; if missing, use defaults from config
+        dynamic_params: Dict[str, Any] = {}
+        if parameters:
+            try:
+                parsed = json.loads(parameters)
+                if isinstance(parsed, dict):
+                    dynamic_params = parsed
+                else:
+                    raise ValueError("'parameters' must be a JSON object")
+            except (json.JSONDecodeError, ValueError) as e:
+                raise HTTPException(status_code=400, detail=f"Invalid parameters: {e}")
+        else:
+            # Fill defaults from loaded parameters config
+            global _parameters_config
+            if not _parameters_config:
+                try:
+                    _load_parameters_config()
+                except Exception:
+                    _parameters_config = {"parameters": []}
+            for p in _parameters_config.get("parameters", []):
+                if "name" in p and "default" in p:
+                    dynamic_params[p["name"]] = p["default"]
 
         if not files:
             raise HTTPException(status_code=400, detail="No files provided")
@@ -341,11 +423,7 @@ async def upload_images(
 
         # Create the processing job first to get the job ID
         job = ProcessingJob(
-            parameters={
-                "quality": request_data.quality,
-                "max_features": request_data.max_features,
-                "enable_gpu": request_data.enable_gpu,
-            },
+            parameters={**dynamic_params},
         )
 
         # Create job-specific directories
@@ -529,6 +607,10 @@ async def download_model(job_id: str) -> FileResponse:
         with open(model_path, "wb") as f:
             f.write(model_data)
 
+        # Update job with result path (relative to project root for logs)
+        rel_model_path = os.path.relpath(model_path, start=project_root)
+        job.result_file_path = rel_model_path
+
         logger.info(
             f"Generated {model_type} model for job {validated_job_id}: {len(model_data)} bytes -> "
             f"{model_path}"
@@ -682,6 +764,13 @@ if __name__ == "__main__":
         default=False,
         help="Enable auto-reload for development",
     )
+    parser.add_argument(
+        "--log-level",
+        type=str,
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        help="Logging verbosity level",
+    )
 
     args = parser.parse_args()
 
@@ -690,6 +779,9 @@ if __name__ == "__main__":
 
     # Update global configuration
     globals()["USE_REAL_MODEL"] = args.real_model
+
+    # Configure logging level
+    logging.getLogger().setLevel(getattr(logging, args.log_level.upper(), logging.INFO))
 
     # Log configuration
     model_type = "real (monstree.glb)" if args.real_model else "fake (generated)"
@@ -702,5 +794,5 @@ if __name__ == "__main__":
         host=args.host,
         port=args.port,
         reload=args.reload,
-        log_level="info",
+        log_level=args.log_level.lower(),
     )

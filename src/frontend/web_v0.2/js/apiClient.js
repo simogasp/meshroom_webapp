@@ -211,15 +211,31 @@ export class ApiClient {
    * Start processing job
    * @param {File[]} files - Input files
    * @param {Object} parameters - Processing parameters
+   * @param {string[]} [filePaths] - Optional relative file paths corresponding to each file
    * @returns {Promise<string>} Job ID
    */
-  async startProcessing(files, parameters = {}) {
+  async startProcessing(files, parameters = {}, filePaths = null) {
     try {
       const formData = new FormData();
 
-      // Add files to FormData
-      files.forEach((file) => {
+      // Add files to FormData with their relative paths if available
+      files.forEach((file, index) => {
         formData.append('files', file);
+        
+        // Use provided file paths or fallback to webkitRelativePath
+        let relativePath;
+        if (filePaths && filePaths[index]) {
+          relativePath = filePaths[index];
+        } else {
+          // Fallback to webkitRelativePath for directory selections
+          relativePath = file.webkitRelativePath;
+        }
+        
+        if (relativePath) {
+          formData.append(`file_paths`, relativePath);
+        } else {
+          formData.append(`file_paths`, file.name);
+        }
       });
 
       // Always include full dynamic parameters payload for the backend

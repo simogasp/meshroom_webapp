@@ -553,6 +553,15 @@
   padding: var(--spacing-xl);
 }
 
+.modal-body .error-message {
+  line-height: 1.6;
+  white-space: pre-wrap;
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  margin: 0;
+}
+
 .modal-actions {
   display: flex;
   justify-content: flex-end;

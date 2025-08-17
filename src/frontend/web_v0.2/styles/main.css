@@ -404,6 +404,14 @@ body {
   margin-top: var(--spacing-sm);
 }
 
+.upload-buttons {
+  display: flex;
+  gap: var(--spacing-sm);
+  justify-content: center;
+  align-items: center;
+  margin: var(--spacing-md) 0;
+}
+
 /* Image Preview */
 .image-preview-container {
   margin-top: var(--spacing-xl);

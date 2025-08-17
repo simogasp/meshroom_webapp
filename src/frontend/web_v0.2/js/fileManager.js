@@ -23,6 +23,18 @@ class FileManager {
 
     this.selectedFiles = [];
     this.fileMap = new Map(); // Map to track files by unique ID
+    /**
+     * Stores the relative path for each File object.
+     * 
+     * WeakMap is used instead of Map so that when a File object is no longer referenced
+     * elsewhere (e.g., after being removed from selectedFiles), its entry is automatically
+     * garbage collected. This prevents memory leaks that could occur if a regular Map
+     * were used, since File objects can be large and numerous.
+     * 
+     * When files are processed and removed from the file manager, their corresponding
+     * relative path entries in this WeakMap will also be cleaned up automatically.
+     */
+    this.fileRelativePaths = new WeakMap();
     this.fileCounter = 0;
     
     this.init();
@@ -46,6 +58,7 @@ class FileManager {
     this.uploadArea = document.getElementById('uploadArea');
     this.fileInput = document.getElementById('fileInput');
     this.selectFilesBtn = document.getElementById('selectFilesBtn');
+    this.selectFolderBtn = document.getElementById('selectFolderBtn');
     this.uploadText = document.getElementById('uploadText');
     this.uploadSubtext = document.getElementById('uploadSubtext');
     this.imagePreview = document.getElementById('imagePreview');
@@ -73,6 +86,13 @@ class FileManager {
     if (this.selectFilesBtn) {
       this.selectFilesBtn.addEventListener('click', () => {
         this.fileInput?.click();
+      });
+    }
+
+    // Select folder button - trigger directory selection
+    if (this.selectFolderBtn) {
+      this.selectFolderBtn.addEventListener('click', () => {
+        this.triggerDirectorySelection();
       });
     }
 
@@ -125,8 +145,293 @@ class FileManager {
     e.preventDefault();
     this.uploadArea.classList.remove('dragover');
     
-    const files = Array.from(e.dataTransfer.files);
-    this.handleFileSelect(files);
+    // Check if directories were dropped using the dataTransfer.items API
+    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+      this.handleDropItems(e.dataTransfer.items);
+    } else {
+      // Fallback to regular file handling
+      const files = Array.from(e.dataTransfer.files);
+      this.handleFileSelect(files);
+    }
+  }
+
+  /**
+   * Build error message for rejected and duplicate files
+   * @param {Array} rejectedFiles - Array of rejected files with reasons
+   * @param {Array} duplicateFiles - Array of duplicate files
+   * @param {Array} validFiles - Array of valid files
+   * @param {Array} directoryNames - Array of directory names for context
+   * @returns {Object} Error message object
+   */
+  buildErrorMessage(rejectedFiles, duplicateFiles, validFiles, directoryNames = []) {
+    let errorMessage = '';
+    const errorDetails = [];
+
+    if (directoryNames.length > 0) {
+      const dirText = directoryNames.length === 1 ? 'directory' : 'directories';
+      errorMessage = `From ${directoryNames.length} ${dirText} (${directoryNames.join(', ')}): `;
+    }
+
+    if (rejectedFiles.length > 0) {
+      errorMessage += `${rejectedFiles.length} file${rejectedFiles.length !== 1 ? 's' : ''} rejected`;
+      rejectedFiles.forEach(({ file, reason }) => {
+        const path = this.getFileDisplayPath(file);
+        errorDetails.push(`❌ "${path}" - ${reason}`);
+      });
+    }
+
+    if (duplicateFiles.length > 0) {
+      if (errorMessage && !errorMessage.endsWith(': ')) {
+        errorMessage += ` and ${duplicateFiles.length} duplicate${duplicateFiles.length !== 1 ? 's' : ''} skipped`;
+      } else {
+        errorMessage += `${duplicateFiles.length} duplicate file${duplicateFiles.length !== 1 ? 's' : ''} skipped`;
+      }
+      
+      duplicateFiles.forEach(file => {
+        const path = this.getFileDisplayPath(file);
+        errorDetails.push(`⚠️ "${path}" - Already selected`);
+      });
+    }
+
+    if (validFiles.length > 0) {
+      errorMessage += `. ${validFiles.length} valid file${validFiles.length !== 1 ? 's' : ''} added.`;
+    }
+
+    return {
+      type: 'validation_errors',
+      message: errorMessage,
+      details: errorDetails
+    };
+  }
+
+  /**
+   * Get the display path for a file, using multiple fallback strategies.
+   * Returns the file's relative path if available (e.g., from directory selection or drag-and-drop),
+   * otherwise falls back to a stored relative path, and finally to the file's name.
+   * @param {File} file - The file object to get the display path for.
+   * @returns {string} The display path for the file.
+   */
+  getFileDisplayPath(file) {
+    return file.webkitRelativePath || this.fileRelativePaths.get(file) || file.name;
+  }
+
+  /**
+   * Handle dropped items (files and directories)
+   * @param {DataTransferItemList} items - Dropped items
+   */
+  async handleDropItems(items) {
+    const allFiles = [];
+    const directoryNames = [];
+
+    for (const item of items) {
+      if (item.kind === 'file') {
+        const entry = item.webkitGetAsEntry();
+        if (entry) {
+          if (entry.isFile) {
+            // Single file
+            const file = item.getAsFile();
+            if (file) {
+              allFiles.push(file);
+            }
+          } else if (entry.isDirectory) {
+            // Directory
+            directoryNames.push(entry.name);
+            try {
+              const files = await this.readDirectoryRecursively(entry);
+              allFiles.push(...files);
+            } catch (error) {
+              console.error('Error reading directory:', entry.name, error);
+              if (typeof this.options.onError === 'function') {
+                this.options.onError({
+                  type: 'directory_read_error',
+                  message: `Failed to read directory "${entry.name}": ${error.message}`,
+                  directory: entry.name
+                });
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // If directories were processed, show a different message
+    if (directoryNames.length > 0) {
+      this.handleDirectoryFiles(allFiles, directoryNames);
+    } else {
+      this.handleFileSelect(allFiles);
+    }
+  }
+
+  /**
+   * Read entries from directory reader
+   * @param {FileSystemDirectoryReader} reader - Directory reader
+   * @returns {Promise<Array>} Promise resolving to array of entries
+   */
+  static async readEntries(reader) {
+    return new Promise((resolve, reject) => {
+      reader.readEntries(resolve, reject);
+    });
+  }
+
+  /**
+   * Recursively read files from a directory entry
+   * @param {FileSystemDirectoryEntry} directoryEntry - Directory entry
+   * @returns {Promise<File[]>} Promise resolving to array of files
+   */
+  async readDirectoryRecursively(directoryEntry) {
+    const files = [];
+
+    const reader = directoryEntry.createReader();
+
+    try {
+      let entries = [];
+      do {
+        entries = await FileManager.readEntries(reader);
+        for (const entry of entries) {
+          if (entry.isFile) {
+            try {
+              const file = await this.getFileFromEntry(entry);
+              if (file) {
+                // Associate directory path information with the file using WeakMap
+                // Remove leading slash from fullPath for consistency with webkitRelativePath
+                const relativePath = entry.fullPath.startsWith('/') ? entry.fullPath.slice(1) : entry.fullPath;
+                this.fileRelativePaths.set(file, relativePath);
+                files.push(file);
+              }
+            } catch (error) {
+              console.error('Error reading file entry:', entry.fullPath, error);
+              if (typeof this.options.onError === 'function') {
+                this.options.onError({
+                  type: 'file_read_error',
+                  message: `Failed to read file "${entry.fullPath}" from directory "${directoryEntry.name}": ${error.message || 'Unknown error'}`,
+                  details: [`Directory: ${directoryEntry.name}`, `File: ${entry.fullPath}`, `Error Type: ${error.name || 'FileReadError'}`],
+                  entry: entry,
+                  directory: directoryEntry.name,
+                  errorType: error.name || 'FileReadError'
+                });
+              }
+            }
+          } else if (entry.isDirectory) {
+            const subFiles = await this.readDirectoryRecursively(entry);
+            files.push(...subFiles);
+          }
+        }
+      } while (entries.length > 0);
+    } catch (error) {
+      console.error('Error reading directory:', error);
+    }
+
+    return files;
+  }
+
+  /**
+   * Get file from FileSystemFileEntry
+   * @param {FileSystemFileEntry} fileEntry - File entry
+   * @returns {Promise<File>} Promise resolving to File object
+   */
+  getFileFromEntry(fileEntry) {
+    return new Promise((resolve, reject) => {
+      fileEntry.file(resolve, reject);
+    });
+  }
+
+  /**
+   * Trigger directory selection using file input
+   */
+  triggerDirectorySelection() {
+    // Create a temporary file input with directory selection
+    const dirInput = document.createElement('input');
+    dirInput.type = 'file';
+    dirInput.webkitdirectory = true;
+    dirInput.multiple = true;
+    
+    dirInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files.length > 0) {
+        const files = Array.from(e.target.files);
+        const directoryName = this.extractDirectoryName(files);
+        this.handleDirectoryFiles(files, directoryName ? [directoryName] : []);
+      }
+    });
+
+    dirInput.click();
+  }
+
+  /**
+   * Extract directory name from file list
+   * @param {File[]} files - Array of files from directory selection
+   * @returns {string|null} Directory name or null
+   */
+  extractDirectoryName(files) {
+    if (files.length === 0) return null;
+    
+    // Get the first part of the webkitRelativePath
+    const firstFile = files[0];
+    if (firstFile.webkitRelativePath) {
+      return firstFile.webkitRelativePath.split('/')[0];
+    }
+    
+    return null;
+  }
+
+  /**
+   * Handle files from directory selection with special messaging
+   * @param {File[]} files - Array of files
+   * @param {string[]} directoryNames - Names of processed directories
+   */
+  handleDirectoryFiles(files, directoryNames = []) {
+    const fileArray = Array.from(files);
+    
+    if (fileArray.length === 0) {
+      return;
+    }
+
+    // Check total file limit
+    if (this.selectedFiles.length + fileArray.length > this.options.maxFiles) {
+      this.options.onError({
+        type: 'file_limit',
+        message: `Maximum ${this.options.maxFiles} files allowed. Currently have ${this.selectedFiles.length} files.`
+      });
+      return;
+    }
+
+    const validFiles = [];
+    const rejectedFiles = [];
+    const duplicateFiles = [];
+
+    // Validate each file
+    fileArray.forEach(file => {
+      const validation = this.validateFile(file);
+      if (validation.valid) {
+        // Check for duplicates by name and size
+        const isDuplicate = this.selectedFiles.some(existingFile => 
+          existingFile.name === file.name && existingFile.size === file.size
+        );
+        
+        if (!isDuplicate) {
+          validFiles.push(file);
+        } else {
+          duplicateFiles.push(file);
+        }
+      } else {
+        rejectedFiles.push({
+          file: file,
+          reason: validation.error
+        });
+      }
+    });
+
+    // Build detailed error message with directory context
+    if (rejectedFiles.length > 0 || duplicateFiles.length > 0) {
+      const errorInfo = this.buildErrorMessage(rejectedFiles, duplicateFiles, validFiles, directoryNames);
+      this.options.onError(errorInfo);
+    }
+
+    // Add valid files
+    if (validFiles.length > 0) {
+      validFiles.forEach(file => this.addFile(file));
+      this.updateUI();
+      this.options.onFilesSelected(this.selectedFiles);
+    }
   }
 
   /**
@@ -150,7 +455,8 @@ class FileManager {
     }
 
     const validFiles = [];
-    const errors = [];
+    const rejectedFiles = [];
+    const duplicateFiles = [];
 
     // Validate each file
     fileArray.forEach(file => {
@@ -164,20 +470,20 @@ class FileManager {
         if (!isDuplicate) {
           validFiles.push(file);
         } else {
-          errors.push(`File "${file.name}" is already selected`);
+          duplicateFiles.push(file);
         }
       } else {
-        errors.push(`${file.name}: ${validation.error}`);
+        rejectedFiles.push({
+          file: file,
+          reason: validation.error
+        });
       }
     });
 
-    // Show errors if any
-    if (errors.length > 0) {
-      this.options.onError({
-        type: 'validation_errors',
-        message: `Some files were rejected:`,
-        details: errors
-      });
+    // Build detailed error message if there are rejected or duplicate files
+    if (rejectedFiles.length > 0 || duplicateFiles.length > 0) {
+      const errorInfo = this.buildErrorMessage(rejectedFiles, duplicateFiles, validFiles);
+      this.options.onError(errorInfo);
     }
 
     // Add valid files
@@ -199,11 +505,38 @@ class FileManager {
    * @returns {Object} Validation result
    */
   validateFile(file) {
-    // Check file type
-    if (!this.options.allowedTypes.includes(file.type)) {
+    // Check if file is actually an image by type
+    if (!file.type.startsWith('image/')) {
+      // Provide more specific error for common non-image file types
+      const extension = file.name.includes('.') ? file.name.split('.').pop().toLowerCase() : '';
+      const commonTypes = {
+        'pdf': 'PDF documents',
+        'doc': 'Word documents', 'docx': 'Word documents',
+        'txt': 'text files',
+        'mp4': 'videos', 'avi': 'videos', 'mov': 'videos', 'mkv': 'videos',
+        'mp3': 'audio files', 'wav': 'audio files', 'flac': 'audio files',
+        'zip': 'archives', 'rar': 'archives', '7z': 'archives',
+        'exe': 'executable files',
+        'js': 'code files', 'html': 'code files', 'css': 'code files', 'py': 'code files'
+      };
+      
+      const typeDescription = Object.hasOwn(commonTypes, extension) 
+        ? commonTypes[extension]
+        : 'non-image files';
       return {
         valid: false,
-        error: `Invalid file type. Allowed: ${this.options.allowedTypes.join(', ')}`
+        error: `Not an image file (${typeDescription} are not supported)`
+      };
+    }
+
+    // Check if file type is in allowed list
+    if (!this.options.allowedTypes.includes(file.type)) {
+      const supportedFormats = this.options.allowedTypes
+        .map(type => type.replace('image/', '').toUpperCase())
+        .join(', ');
+      return {
+        valid: false,
+        error: `Unsupported image format. Supported: ${supportedFormats}`
       };
     }
 
@@ -211,15 +544,15 @@ class FileManager {
     if (file.size > this.options.maxFileSize) {
       return {
         valid: false,
-        error: `File too large. Max size: ${this.formatFileSize(this.options.maxFileSize)}`
+        error: `File too large (${this.formatFileSize(file.size)}). Max: ${this.formatFileSize(this.options.maxFileSize)}`
       };
     }
 
-    // Check if file is actually an image
-    if (!file.type.startsWith('image/')) {
+    // Check for empty files
+    if (file.size === 0) {
       return {
         valid: false,
-        error: 'Please select a valid image file'
+        error: 'Empty file (0 bytes)'
       };
     }
 
@@ -363,11 +696,15 @@ class FileManager {
       ? `<div class="file-meta">${fileData.metadata.width}×${fileData.metadata.height}</div>`
       : '';
 
+    // Show relative path if file comes from a directory
+    const displayName = this.getFileDisplayPath(fileData.file);
+    const truncatedName = this.truncateFileName(displayName);
+
     previewElement.innerHTML = `
       <img src="${fileData.previewUrl}" alt="${fileData.name}" class="preview-image">
       <div class="preview-overlay">
         <div class="preview-info">
-          <div class="file-name" title="${fileData.name}">${this.truncateFileName(fileData.name)}</div>
+          <div class="file-name" title="${displayName}">${truncatedName}</div>
           <div class="file-size">${this.formatFileSize(fileData.size)}</div>
           ${metadataHtml}
         </div>
@@ -400,7 +737,7 @@ class FileManager {
     if (fileCount === 0) {
       if (this.uploadText) {
         this.uploadText.innerHTML = `
-          <strong>Drag and drop your images here</strong>
+          <strong>Drag and drop your images or folders here</strong>
           <br>or
         `;
       }
@@ -408,7 +745,7 @@ class FileManager {
       if (this.uploadText) {
         this.uploadText.innerHTML = `
           <strong>${fileCount} image${fileCount !== 1 ? 's' : ''} selected</strong>
-          <br>Add more files or
+          <br>Add more files/folders or
         `;
       }
     }
@@ -421,7 +758,7 @@ class FileManager {
     // Update subtext
     if (this.uploadSubtext) {
       this.uploadSubtext.textContent = fileCount === 0 
-        ? 'Supports JPEG, PNG, TIFF, WebP formats. Max 100MB per file.'
+        ? 'Supports JPEG, PNG, TIFF, WebP formats. Max 100MB per file. Drag folders for bulk upload.'
         : `Total: ${this.formatFileSize(this.getTotalSize())} • ${this.options.maxFiles - fileCount} more allowed`;
     }
   }

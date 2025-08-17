@@ -294,7 +294,9 @@ export class App {
     
     let errorMessage = error.message;
     if (error.details && error.details.length > 0) {
-      errorMessage += '\n\nDetails:\n' + error.details.join('\n');
+      // Escape HTML in details to prevent XSS
+      const escapedDetails = error.details.map(detail => this.escapeHtml(detail));
+      errorMessage += '\n\nDetails:\n' + escapedDetails.join('\n');
     }
     
     this.showError('File Error', errorMessage);
@@ -333,10 +335,14 @@ export class App {
       // Get all selected file objects
       const fileObjects = this.state.selectedFiles.map(fileData => fileData.file);
       
+      // Get relative paths for each file from fileManager
+      const filePaths = fileObjects.map(file => this.components.fileManager.getFileDisplayPath(file));
+      
       // Upload files and start processing
       const jobId = await this.apiClient.startProcessing(
         fileObjects,
-        this.state.parameters
+        this.state.parameters,
+        filePaths
       );
       
       this.state.currentJobId = jobId;
@@ -671,13 +677,31 @@ export class App {
       this.components.modal.showModal({
         type: 'error',
         title: title,
-        message: message,
-        buttons: ['OK']
+        content: `<div class="error-message">${this.escapeHtml(message)}</div>`,
+        actions: [
+          {
+            text: 'OK',
+            variant: 'primary',
+            action: () => true,
+            autoFocus: true
+          }
+        ]
       });
     } else {
       // Fallback to alert if modal is not available
       alert(`${title}: ${message}`);
     }
+  }
+
+  /**
+   * Escape HTML characters to prevent XSS attacks
+   * @param {string} text - Text to escape
+   * @returns {string} Escaped text
+   */
+  escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
   }
 
   /**

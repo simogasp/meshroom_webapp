@@ -199,7 +199,7 @@ class FileManager {
    * @returns {string} Display path
    */
   getFileDisplayPath(file) {
-    return this.fileRelativePaths.get(file) || file.webkitRelativePath || file.name;
+    return file.webkitRelativePath || this.fileRelativePaths.get(file) || file.name;
   }
 
   /**
@@ -280,7 +280,8 @@ class FileManager {
               const file = await this.getFileFromEntry(entry);
               if (file) {
                 // Associate directory path information with the file using WeakMap
-                this.fileRelativePaths.set(file, entry.fullPath);
+                // Remove leading slash from fullPath for consistency with webkitRelativePath
+                this.fileRelativePaths.set(file, entry.fullPath.slice(1));
                 files.push(file);
               }
             } catch (error) {

@@ -398,10 +398,17 @@ async def _process_uploaded_files(
                 # Path traversal protection: ensure nested_dir is within uploads_dir
                 abs_uploads_dir = os.path.abspath(uploads_dir)
                 abs_nested_dir = os.path.abspath(nested_dir)
-                if (
-                    os.path.commonpath([abs_uploads_dir, abs_nested_dir])
-                    != abs_uploads_dir
-                ):
+                try:
+                    if (
+                        os.path.commonpath([abs_uploads_dir, abs_nested_dir])
+                        != abs_uploads_dir
+                    ):
+                        raise HTTPException(
+                            status_code=400,
+                            detail=f"Invalid relative path: path traversal detected in {relative_path}",
+                        )
+                except ValueError:
+                    # Paths have no common base (different drives on Windows or invalid paths)
                     raise HTTPException(
                         status_code=400,
                         detail=f"Invalid relative path: path traversal detected in {relative_path}",

@@ -702,8 +702,6 @@ export class ParameterPanel {
       return;
     }
 
-    const toTitle = (s) => s.charAt(0).toUpperCase() + s.slice(1);
-
     const newDefs = {};
     const advancedGroup = {
       type: 'group',
@@ -740,6 +738,14 @@ export class ParameterPanel {
    * @private
    */
   _mapSchemaParamToUi(p) {
+    const toStringSafe = (v) => {
+      try { 
+        return String(v); 
+      } catch { 
+        return ''; 
+      }
+    };
+
     const base = {
       label: p.label || toStringSafe(p.name),
       description: p.description || '',
@@ -776,10 +782,6 @@ export class ParameterPanel {
       }
       default:
         return { ...base, type: 'text' };
-    }
-
-    function toStringSafe(v) {
-      try { return String(v); } catch { return ''; }
     }
   }
 }

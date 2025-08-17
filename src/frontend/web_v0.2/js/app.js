@@ -813,9 +813,9 @@ export class App {
         this.components.parameterPanel?.loadFromServer(config);
         this.log('info', 'Loaded dynamic parameters from server');
       }
-    } catch (e) {
+    } catch (error) {
       // Fallback to built-in defaults
-      this.log('warning', 'Dynamic parameters not available, using defaults');
+      this.log('warning', `Dynamic parameters not available, using defaults: ${error.message}`);
     }
   }
 

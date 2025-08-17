@@ -520,8 +520,8 @@ class FileManager {
         'js': 'code files', 'html': 'code files', 'css': 'code files', 'py': 'code files'
       };
       
-      const typeDescription = Object.prototype.hasOwnProperty.call(commonTypes, extension) 
-        ? Object.prototype.hasOwnProperty.call(commonTypes, extension) && commonTypes[extension]
+      const typeDescription = Object.hasOwn(commonTypes, extension) 
+        ? commonTypes[extension]
         : 'non-image files';
       return {
         valid: false,

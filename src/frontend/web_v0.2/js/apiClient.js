@@ -222,6 +222,10 @@ export class ApiClient {
         formData.append('files', file);
         
         // Send relative path information if file has directory structure
+        // Note: file.webkitRelativePath is standard for directory uploads in browsers.
+        // file.relativePath is a non-standard/custom property that may be set by certain
+        // drag-and-drop libraries or custom file input handlers. It is used here as a fallback
+        // in case webkitRelativePath is not available. If neither is set, file.name is used.
         const relativePath = file.webkitRelativePath || file.relativePath;
         if (relativePath) {
           formData.append(`file_paths`, relativePath);

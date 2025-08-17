@@ -294,7 +294,9 @@ export class App {
     
     let errorMessage = error.message;
     if (error.details && error.details.length > 0) {
-      errorMessage += '\n\nDetails:\n' + error.details.join('\n');
+      // Escape HTML in details to prevent XSS
+      const escapedDetails = error.details.map(detail => this.escapeHtml(detail));
+      errorMessage += '\n\nDetails:\n' + escapedDetails.join('\n');
     }
     
     this.showError('File Error', errorMessage);

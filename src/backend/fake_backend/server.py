@@ -393,8 +393,19 @@ async def _process_uploaded_files(
             # Extract directory from relative path
             rel_dir = os.path.dirname(relative_path)
             if rel_dir:
-                # Create nested directory structure
+                # Create nested directory structure with path traversal protection
                 nested_dir = os.path.join(uploads_dir, rel_dir)
+                # Path traversal protection: ensure nested_dir is within uploads_dir
+                abs_uploads_dir = os.path.abspath(uploads_dir)
+                abs_nested_dir = os.path.abspath(nested_dir)
+                if (
+                    os.path.commonpath([abs_uploads_dir, abs_nested_dir])
+                    != abs_uploads_dir
+                ):
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Invalid relative path: path traversal detected in {relative_path}",
+                    )
                 os.makedirs(nested_dir, exist_ok=True)
                 upload_path = os.path.join(nested_dir, secure_filename)
             else:

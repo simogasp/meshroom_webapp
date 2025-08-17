@@ -223,8 +223,19 @@ class FileManager {
           } else if (entry.isDirectory) {
             // Directory
             directoryNames.push(entry.name);
-            const files = await this.readDirectoryRecursively(entry);
-            allFiles.push(...files);
+            try {
+              const files = await this.readDirectoryRecursively(entry);
+              allFiles.push(...files);
+            } catch (error) {
+              console.error('Error reading directory:', entry.name, error);
+              if (typeof this.options.onError === 'function') {
+                this.options.onError({
+                  type: 'directory_read_error',
+                  message: `Failed to read directory "${entry.name}": ${error.message}`,
+                  directory: entry.name
+                });
+              }
+            }
           }
         }
       }
@@ -265,11 +276,22 @@ class FileManager {
         entries = await FileManager.readEntries(reader);
         for (const entry of entries) {
           if (entry.isFile) {
-            const file = await this.getFileFromEntry(entry);
-            if (file) {
-              // Associate directory path information with the file using WeakMap
-              this.fileRelativePaths.set(file, entry.fullPath);
-              files.push(file);
+            try {
+              const file = await this.getFileFromEntry(entry);
+              if (file) {
+                // Associate directory path information with the file using WeakMap
+                this.fileRelativePaths.set(file, entry.fullPath);
+                files.push(file);
+              }
+            } catch (error) {
+              console.error('Error reading file entry:', entry.fullPath, error);
+              if (typeof this.options.onError === 'function') {
+                this.options.onError({
+                  type: 'file_read_error',
+                  message: `Failed to read file "${entry.fullPath}": ${error.message}`,
+                  entry: entry
+                });
+              }
             }
           } else if (entry.isDirectory) {
             const subFiles = await this.readDirectoryRecursively(entry);
@@ -468,7 +490,7 @@ class FileManager {
     // Check if file is actually an image by type
     if (!file.type.startsWith('image/')) {
       // Provide more specific error for common non-image file types
-      const extension = file.name.split('.').pop()?.toLowerCase();
+      const extension = file.name.includes('.') ? file.name.split('.').pop().toLowerCase() : '';
       const commonTypes = {
         'pdf': 'PDF documents',
         'doc': 'Word documents', 'docx': 'Word documents',

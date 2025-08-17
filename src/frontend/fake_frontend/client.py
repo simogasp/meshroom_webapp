@@ -101,9 +101,6 @@ class PhotogrammetryClient:
     def upload_images(
         self,
         images: List[Dict[str, Any]],
-        quality: str = "medium",
-        max_features: int = 1000,
-        enable_gpu: bool = False,
         extra_parameters: Optional[Dict[str, Any]] = None,
     ) -> Optional[str]:
         """
@@ -111,9 +108,6 @@ class PhotogrammetryClient:
 
         Args:
             images: List of image data dictionaries
-            quality: Processing quality level
-            max_features: Maximum number of features to extract
-            enable_gpu: Whether to enable GPU acceleration
             extra_parameters: Optional dynamic parameters to include
 
         Returns:
@@ -128,20 +122,11 @@ class PhotogrammetryClient:
                 )
 
             # Prepare the form data
-            data: Dict[str, Any] = {
-                "quality": quality,
-                "max_features": max_features,
-                "enable_gpu": enable_gpu,
-            }
-
-            # Include dynamic parameters as JSON if provided
+            data: Dict[str, Any] = {}
             if extra_parameters:
                 data["parameters"] = json.dumps(extra_parameters)
 
             logger.info(f"Uploading {len(images)} images to {self.base_url}/upload")
-            logger.info(
-                f"Parameters: quality={quality}, max_features={max_features}, enable_gpu={enable_gpu}"
-            )
 
             # Send upload request
             response = self.session.post(
@@ -371,15 +356,14 @@ class PhotogrammetryClient:
             return False
 
     def run_test_workflow(
-        self, image_count: int = 5, quality: str = "medium", max_features: int = 1000
+        self, image_count: int = 5, parameters: Optional[Dict[str, Any]] = None
     ) -> bool:
         """
         Run a complete test workflow.
 
         Args:
             image_count: Number of test images to generate
-            quality: Processing quality level
-            max_features: Maximum number of features to extract
+            parameters: Optional dynamic parameters to include
 
         Returns:
             True if workflow completed successfully, False otherwise
@@ -397,7 +381,7 @@ class PhotogrammetryClient:
 
             # Step 2: Upload images
             logger.info("Step 2: Uploading images...")
-            job_id = self.upload_images(images, quality, max_features)
+            job_id = self.upload_images(images, extra_parameters=parameters)
             if not job_id:
                 logger.error("Upload failed")
                 return False
@@ -450,14 +434,9 @@ def main() -> None:
         "--images", type=int, default=8, help="Number of test images to generate"
     )
     parser.add_argument(
-        "--quality",
+        "--parameters",
         type=str,
-        default="high",
-        choices=["low", "medium", "high"],
-        help="Processing quality",
-    )
-    parser.add_argument(
-        "--max-features", type=int, default=2000, help="Maximum number of features"
+        help='JSON object with dynamic parameters (e.g. \'{"quality":"medium"}\')',
     )
     parser.add_argument(
         "--verbose",
@@ -493,10 +472,17 @@ def main() -> None:
     logger.info("Backend is running and healthy")
     logger.info("")
 
-    # Run test workflow
-    success = client.run_test_workflow(
-        image_count=args.images, quality=args.quality, max_features=args.max_features
-    )
+    params_dict: Optional[Dict[str, Any]] = None
+    if args.parameters:
+        try:
+            params_dict = json.loads(args.parameters)
+            if not isinstance(params_dict, dict):
+                raise ValueError("parameters must be a JSON object")
+        except Exception as e:
+            logger.error(f"Invalid --parameters JSON: {e}")
+            return
+
+    success = client.run_test_workflow(image_count=args.images, parameters=params_dict)
 
     if success:
         logger.info("All tests passed")

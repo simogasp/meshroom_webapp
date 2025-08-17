@@ -222,17 +222,6 @@ export class ApiClient {
         formData.append('files', file);
       });
 
-      // Backward-compatible legacy fields if present
-      if (parameters.quality !== undefined) {
-        formData.append('quality', String(parameters.quality));
-      }
-      if (parameters.max_features !== undefined) {
-        formData.append('max_features', String(parameters.max_features));
-      }
-      if (parameters.enable_gpu !== undefined) {
-        formData.append('enable_gpu', String(parameters.enable_gpu));
-      }
-
       // Always include full dynamic parameters payload for the backend
       formData.append('parameters', JSON.stringify(parameters));
 

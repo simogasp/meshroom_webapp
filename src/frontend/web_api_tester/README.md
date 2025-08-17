@@ -48,8 +48,7 @@ open src/frontend/web_api_tester/web_test.html
 ### 📤 File Upload
 
 - **Real File Upload**: Select images from your computer
-- **Dummy File Generator**: Create test images without files
-- **Parameter Configuration**: Quality, max features, GPU settings
+- **Parameters JSON**: Provide a JSON object in the `parameters` field; leave empty to use server defaults from `parameters.json`
 - **Auto Job ID Population**: Automatically fills job ID from successful uploads
 
 ### 🔧 Job Management
@@ -78,7 +77,7 @@ open src/frontend/web_api_tester/web_test.html
 ### Basic Workflow
 
 1. **Test Connection** → Verify backend is running
-2. **Upload Images** → Use real files or dummy generator
+2. **Upload Images** → Use real files and provide optional parameters JSON
 3. **Monitor Progress** → Connect WebSocket to see real-time updates
 4. **Download Model** → Get the completed 3D model
 5. **Review Logs** → Check all API responses
@@ -98,7 +97,7 @@ open src/frontend/web_api_tester/web_test.html
 | GET | `/` | Server status | None |
 | GET | `/health` | Health check | None |
 | GET | `/jobs` | List all jobs | None |
-| POST | `/upload` | Upload images | `files`, `quality`, `max_features`, `enable_gpu` |
+| POST | `/upload` | Upload images | `files`, `parameters` (JSON object) |
 | GET | `/jobs/{id}` | Job status | `id` (path parameter) |
 | GET | `/jobs/{id}/download` | Download model | `id` (path parameter) |
 | DELETE | `/jobs/{id}` | Cancel job | `id` (path parameter) |
@@ -114,10 +113,16 @@ open src/frontend/web_api_tester/web_test.html
 
 ### Upload Parameters
 
-- **Quality**: `low`, `medium`, `high`
-- **Max Features**: 100-10000 (default: 1000)
-- **Enable GPU**: Boolean checkbox
-- **Files**: Multiple image selection supported
+- Provide a JSON object in the **Parameters (JSON)** textarea, for example:
+  ```json
+  {
+    "quality": "medium",
+    "meshResolution": 1024,
+    "optimizeForWeb": true
+  }
+  ```
+- If omitted, the backend uses defaults from its `parameters.json` file.
+- The available parameters and defaults can be retrieved via `GET /parameters`.
 
 ### WebSocket Settings
 
@@ -145,10 +150,10 @@ open src/frontend/web_api_tester/web_test.html
 
 #### "Upload failed"
 
-- ✅ Ensure files are selected (or use dummy generator)
-- ✅ Check file sizes aren't too large (>10MB per file)
+- ✅ Ensure files are selected
+- ✅ Validate the Parameters (JSON) is a valid JSON object
+- ✅ Check file sizes aren't too large
 - ✅ Verify the backend has proper upload permissions
-- ✅ Try the dummy upload option to isolate file issues
 
 #### "Download not working"
 
@@ -200,7 +205,7 @@ The right panel shows all API interactions with detailed information:
 
 ### Efficient Testing
 
-1. Use **dummy uploads** for quick testing without preparing files
+1. Provide only the parameters you need in the JSON; the backend fills defaults
 2. Keep the **WebSocket connected** during job processing for real-time updates
 3. Use **Clear** button to keep the response log manageable
 4. Test **error conditions** by providing invalid job IDs or parameters
@@ -210,14 +215,7 @@ The right panel shows all API interactions with detailed information:
 1. Check the **response log** for detailed error messages
 2. Use **Test Connection** regularly when developing
 3. Monitor **WebSocket messages** for processing insights
-4. Try **different parameter combinations** to test edge cases
-
-### Performance Tips
-
-1. **Close WebSocket connections** when not needed
-2. **Clear the log** periodically for better performance
-3. **Use appropriate file sizes** for upload testing
-4. **Test locally** for fastest response times
+4. Retrieve **available parameters** via `GET /parameters`
 
 ## 🔗 Related Documentation
 

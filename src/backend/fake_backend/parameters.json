@@ -1,0 +1,81 @@
+{
+  "version": "1.0",
+  "parameters" : [
+  {
+    "name": "quality",
+    "type": "enum",
+    "description": "Processing quality level affects speed and output detail",
+    "values": ["draft", "medium", "high", "ultra"],
+    "default": "medium",
+    "required": true,
+    "advanced": false
+  },
+  {
+    "name": "meshResolution",
+    "type": "integer",
+    "description": "Higher resolution creates more detailed geometry",
+    "min": 512,
+    "max": 4096,
+    "step": 256,
+    "default": 1024,
+    "required": true,
+    "advanced": false
+  },
+  {
+    "name": "textureSize",
+    "type": "enum",
+    "description": "Texture resolution affects visual quality",
+    "values": [512, 1024, 2048, 4096],
+    "default": 2048,
+    "required": true,
+    "advanced": false
+  },
+  {
+    "name": "smoothing",
+    "type": "boolean",
+    "description": "Apply smoothing to reduce noise in the mesh",
+    "default": true,
+    "advanced": false
+  },
+  {
+    "name": "removeBackground",
+    "type": "boolean",
+    "description": "Automatically remove background from the input image",
+    "default": false,
+    "advanced": false
+  },
+  {
+    "name": "optimizeForWeb",
+    "type": "boolean",
+    "description": "Optimize model for web display (smaller file size)",
+    "default": true,
+    "advanced": false
+  },
+  {
+    "name": "depthEstimation",
+    "type": "enum",
+    "description": "Algorithm for estimating depth information",
+    "values": ["auto", "midas", "dpt", "zoe"],
+    "default": "auto",
+    "advanced": true
+  },
+  {
+    "name": "meshAlgorithm",
+    "type": "enum",
+    "description": "Algorithm for generating 3D mesh",
+    "values": ["marching_cubes", "poisson", "alpha_shape"],
+    "default": "marching_cubes",
+    "advanced": true
+  },
+  {
+    "name": "simplification",
+    "type": "integer",
+    "description": "Reduce mesh complexity (0 = no simplification)",
+    "min": 0,
+    "max": 90,
+    "step": 5,
+    "default": 0,
+    "advanced": true
+  }
+]
+}

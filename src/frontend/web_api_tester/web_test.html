@@ -147,22 +147,13 @@
                 <label for="fileInput">Select Images:</label>
                 <input type="file" id="fileInput" accept="image/*" multiple class="file-input">
                 
-                <label for="quality">Quality:</label>
-                <select id="quality">
-                    <option value="low">Low</option>
-                    <option value="medium" selected>Medium</option>
-                    <option value="high">High</option>
-                </select>
-                
-                <label for="maxFeatures">Max Features:</label>
-                <input type="number" id="maxFeatures" value="1000" min="100" max="10000">
-                
-                <label>
-                    <input type="checkbox" id="enableGpu"> Enable GPU
-                </label>
-                
-                <button onclick="uploadImages()">POST /upload (Upload Images)</button>
-                <button onclick="generateDummyUpload()">Upload Dummy Images</button>
+                <div>
+                    <label for="parametersJson">Parameters (JSON):</label>
+                    <textarea id="parametersJson" rows="6" style="width: 100%;" placeholder='{"quality":"medium"}'></textarea>
+                    <small>Provide dynamic parameters as a JSON object. Leave empty to use server defaults.</small>
+                </div>
+
+                <button id="uploadBtn">Upload</button>
             </div>
 
             <!-- Job Management -->
@@ -302,9 +293,16 @@
                 formData.append('files', file);
             }
             
-            formData.append('quality', document.getElementById('quality').value);
-            formData.append('max_features', document.getElementById('maxFeatures').value);
-            formData.append('enable_gpu', document.getElementById('enableGpu').checked);
+            const paramsText = document.getElementById('parametersJson').value.trim();
+            if (paramsText) {
+                try {
+                    JSON.parse(paramsText);
+                    formData.append('parameters', paramsText);
+                } catch (e) {
+                    alert('Parameters JSON is invalid');
+                    return;
+                }
+            }
 
             try {
                 const result = await apiRequest('/upload', {
@@ -476,6 +474,32 @@
                 websocket.close();
             }
         };
+
+        document.getElementById('uploadBtn').addEventListener('click', async () => {
+            const input = document.getElementById('files');
+            if (!input.files || input.files.length === 0) {
+                alert('Select at least one image');
+                return;
+            }
+            const formData = new FormData();
+            for (const file of input.files) {
+                formData.append('files', file);
+            }
+            const paramsText = document.getElementById('parametersJson').value.trim();
+            if (paramsText) {
+                try {
+                    JSON.parse(paramsText);
+                    formData.append('parameters', paramsText);
+                } catch (e) {
+                    alert('Parameters JSON is invalid');
+                    return;
+                }
+            }
+            const res = await fetch('http://localhost:8000/upload', { method: 'POST', body: formData });
+            const text = await res.text();
+            console.log('Upload response', res.status, text);
+            alert(`Status: ${res.status}`);
+        });
     </script>
 </body>
 </html>

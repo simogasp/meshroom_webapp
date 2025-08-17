@@ -23,25 +23,6 @@ class JobStatus(Enum):
     FAILED = "failed"
 
 
-class UploadRequest(BaseModel):
-    """Request model for image upload endpoint."""
-
-    quality: str = Field(
-        default="medium",
-        description="Processing quality level",
-        pattern="^(low|medium|high)$",
-    )
-    max_features: int = Field(
-        default=1000,
-        description="Maximum number of features to extract",
-        ge=100,
-        le=10000,
-    )
-    enable_gpu: bool = Field(
-        default=False, description="Whether to enable GPU acceleration"
-    )
-
-
 class JobResponse(BaseModel):
     """Response model for job creation."""
 

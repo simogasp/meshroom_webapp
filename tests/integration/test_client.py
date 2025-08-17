@@ -72,7 +72,7 @@ class ClientIntegrationTester:
 
     def test_image_upload(self, num_images: int = 3) -> Optional[str]:
         """
-        Test uploading images to the backend.
+        Test uploading images to the backend using dynamic parameters JSON.
 
         Args:
             num_images: Number of test images to upload
@@ -91,12 +91,9 @@ class ClientIntegrationTester:
                 content = self.generate_test_image(filename, size_kb)
                 files.append(("files", (filename, content, "image/jpeg")))
 
-            # Upload parameters
-            data = {
-                "quality": "medium",
-                "max_features": 500,  # Smaller for faster testing
-                "enable_gpu": False,
-            }
+            # Dynamic parameters JSON (minimal example); server will use defaults if omitted
+            params = {"quality": "medium"}
+            data = {"parameters": json.dumps(params)}
 
             response = self.session.post(
                 f"{self.backend_url}/upload",

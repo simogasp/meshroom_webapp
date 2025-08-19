@@ -8,6 +8,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+<!-- New features for the next release -->
+
+### Changed
+<!-- Changes in existing functionality -->
+
+### Fixed
+<!-- Bug fixes -->
+
+### Removed
+<!-- Removed features -->
+
+### Security
+<!-- Security improvements -->
+
+## [v0.2.0] - 2025-08-19
+
+### Added
 
 - **Web API Tester**: Interactive HTML-based testing interface (`src/frontend/web_api_tester/web_test.html`)
   - Point-and-click testing for all backend API endpoints
@@ -65,7 +82,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Improved robustness of model download flow by ensuring the server records the generated model path when serving the file and the client retries on transient readiness races.
 
-## [v0.1] - 2025-08-14
+## [v0.1.0] - 2025-08-14
 
 ### Added
 

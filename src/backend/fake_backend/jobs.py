@@ -10,7 +10,7 @@ import logging
 import os
 import random
 from datetime import datetime
-from typing import Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set
 
 from fastapi import WebSocket
 
@@ -94,10 +94,11 @@ def generate_real_model(job_id: str) -> bytes:
 
 class JobManager:
     """
-    Manages processing jobs and WebSocket connections.
+    Manages processing jobs and WebSocket connections with FIFO queue processing.
 
-    Simulates photogrammetry processing with random progress updates
-    and manages real-time communication with clients.
+    Simulates photogrammetry processing with random progress updates,
+    manages real-time communication with clients, and processes jobs
+    one at a time in a first-in-first-out queue.
     """
 
     def __init__(self) -> None:
@@ -105,7 +106,10 @@ class JobManager:
         self._jobs: Dict[str, ProcessingJob] = {}
         self._connections: Dict[str, WebSocket] = {}
         self._job_subscriptions: Dict[str, Set[str]] = {}  # job_id -> connection_ids
-        self._processing_tasks: Dict[str, asyncio.Task] = {}
+        self._job_queue: List[str] = []  # FIFO queue of job IDs
+        self._current_processing_job: Optional[str] = None
+        self._processing_task: Optional[asyncio.Task] = None
+        self._queue_processor_running = False
 
     @property
     def active_jobs_count(self) -> int:
@@ -113,7 +117,7 @@ class JobManager:
         return sum(
             1
             for job in self._jobs.values()
-            if job.status in [JobStatus.PENDING, JobStatus.PROCESSING]
+            if job.status in [JobStatus.QUEUED, JobStatus.PENDING, JobStatus.PROCESSING]
         )
 
     @property
@@ -121,9 +125,19 @@ class JobManager:
         """Get the total count of all jobs."""
         return len(self._jobs)
 
+    @property
+    def queue_length(self) -> int:
+        """Get the current queue length."""
+        return len(self._job_queue)
+
+    @property
+    def is_processing(self) -> bool:
+        """Check if a job is currently being processed."""
+        return self._current_processing_job is not None
+
     def create_job(self, job: ProcessingJob) -> str:
         """
-        Create a new processing job.
+        Create a new processing job and add it to the queue.
 
         Args:
             job: The processing job to create
@@ -131,8 +145,21 @@ class JobManager:
         Returns:
             The job ID
         """
+        # Add job to storage
         self._jobs[job.job_id] = job
-        logger.info(f"Created job {job.job_id} with {job.total_images} images")
+
+        # Add to queue and set queue position
+        self._job_queue.append(job.job_id)
+        job.queue_position = len(self._job_queue)
+
+        logger.info(
+            f"Created job {job.job_id} with {job.total_images} images, queue position: {job.queue_position}"
+        )
+
+        # Start queue processor if not running
+        if not self._queue_processor_running:
+            asyncio.create_task(self._process_queue())
+
         return job.job_id
 
     def get_job(self, job_id: str) -> Optional[ProcessingJob]:
@@ -145,16 +172,65 @@ class JobManager:
         Returns:
             The processing job or None if not found
         """
-        return self._jobs.get(job_id)
+        job = self._jobs.get(job_id)
+        if job and job.status == JobStatus.QUEUED:
+            # Update queue position
+            job.queue_position = self._get_queue_position(job_id)
+        return job
 
     def get_all_jobs(self) -> List[ProcessingJob]:
         """
-        Get all jobs.
+        Get all jobs with updated queue positions.
 
         Returns:
             List of all processing jobs
         """
-        return list(self._jobs.values())
+        jobs = list(self._jobs.values())
+        # Update queue positions for queued jobs
+        for job in jobs:
+            if job.status == JobStatus.QUEUED:
+                job.queue_position = self._get_queue_position(job.job_id)
+        return jobs
+
+    def _get_queue_position(self, job_id: str) -> Optional[int]:
+        """
+        Get the current queue position for a job.
+
+        Args:
+            job_id: The job identifier
+
+        Returns:
+            Queue position (1-based) or None if not in queue
+        """
+        try:
+            return self._job_queue.index(job_id) + 1
+        except ValueError:
+            return None
+
+    def get_queue_status(self) -> Dict[str, Any]:
+        """
+        Get current queue status information.
+
+        Returns:
+            Dictionary with queue statistics
+        """
+        return {
+            "queue_length": self.queue_length,
+            "current_processing_job": self._current_processing_job,
+            "is_processing": self.is_processing,
+            "queued_jobs": [
+                {
+                    "job_id": job_id,
+                    "position": idx + 1,
+                    "created_at": (
+                        self._jobs[job_id].created_at.isoformat()
+                        if job_id in self._jobs
+                        else None
+                    ),
+                }
+                for idx, job_id in enumerate(self._job_queue)
+            ],
+        }
 
     async def register_websocket(self, websocket: WebSocket, job_id: str) -> str:
         """
@@ -197,28 +273,79 @@ class JobManager:
 
     async def start_processing(self, job_id: str) -> None:
         """
-        Start processing a job asynchronously.
+        Deprecated: Jobs are now automatically queued and processed.
+        This method is kept for backward compatibility.
 
         Args:
             job_id: The job identifier
         """
-        job = self.get_job(job_id)
-        if not job:
-            logger.error(f"Job {job_id} not found")
+        logger.warning(
+            f"start_processing called for job {job_id} - jobs are now automatically queued"
+        )
+
+    async def _process_queue(self) -> None:
+        """
+        Process jobs from the queue one at a time in FIFO order.
+        """
+        if self._queue_processor_running:
             return
 
-        if job_id in self._processing_tasks:
-            logger.warning(f"Job {job_id} is already being processed")
-            return
+        self._queue_processor_running = True
+        logger.info("Started queue processor")
 
-        job.status = JobStatus.PROCESSING
-        job.started_at = datetime.now()
+        try:
+            while True:
+                # Check if there are jobs to process
+                if not self._job_queue or self._current_processing_job is not None:
+                    await asyncio.sleep(1)  # Wait and check again
+                    continue
 
-        # Start processing task
-        task = asyncio.create_task(self._simulate_processing(job_id))
-        self._processing_tasks[job_id] = task
+                # Get next job from queue
+                job_id = self._job_queue.pop(0)  # FIFO - take from front
+                job = self._jobs.get(job_id)
 
-        logger.info(f"Started processing job {job_id}")
+                if not job or job.status != JobStatus.QUEUED:
+                    logger.warning(f"Skipping invalid job {job_id} from queue")
+                    continue
+
+                # Update queue positions for remaining jobs
+                self._update_queue_positions()
+
+                # Start processing this job
+                self._current_processing_job = job_id
+                job.status = JobStatus.PROCESSING
+                job.started_at = datetime.now()
+
+                logger.info(
+                    f"Started processing job {job_id} (queue length: {len(self._job_queue)})"
+                )
+
+                # Send queue update to job
+                await self._send_progress_update(
+                    job_id, 0, "Started processing (removed from queue)"
+                )
+
+                # Process the job
+                try:
+                    await self._simulate_processing(job_id)
+                except Exception as e:
+                    logger.error(f"Error processing job {job_id}: {e}")
+                    job.status = JobStatus.FAILED
+                    job.error_message = str(e)
+                finally:
+                    self._current_processing_job = None
+
+        except Exception as e:
+            logger.error(f"Queue processor error: {e}")
+        finally:
+            self._queue_processor_running = False
+            logger.info("Queue processor stopped")
+
+    def _update_queue_positions(self) -> None:
+        """Update queue positions for all queued jobs."""
+        for idx, job_id in enumerate(self._job_queue):
+            if job_id in self._jobs:
+                self._jobs[job_id].queue_position = idx + 1
 
     async def _simulate_processing(self, job_id: str) -> None:
         """
@@ -296,9 +423,8 @@ class JobManager:
             logger.error(f"Job {job_id} failed: {e}")
 
         finally:
-            # Clean up processing task
-            if job_id in self._processing_tasks:
-                del self._processing_tasks[job_id]
+            # No cleanup needed - queue processor handles job completion
+            pass
 
     async def _send_progress_update(
         self, job_id: str, progress: int, message: str
@@ -351,9 +477,23 @@ class JobManager:
         if not job or job.status in [JobStatus.COMPLETED, JobStatus.FAILED]:
             return False
 
-        # Cancel processing task
-        if job_id in self._processing_tasks:
-            self._processing_tasks[job_id].cancel()
+        # Handle different cancellation scenarios
+        if job.status == JobStatus.QUEUED:
+            # Remove from queue
+            try:
+                self._job_queue.remove(job_id)
+                self._update_queue_positions()
+                logger.info(f"Removed job {job_id} from queue")
+            except ValueError:
+                logger.warning(f"Job {job_id} not found in queue")
+
+        elif (
+            job.status == JobStatus.PROCESSING
+            and job_id == self._current_processing_job
+        ):
+            # Cancel the currently processing job
+            # The processing task will handle the cancellation gracefully
+            logger.info(f"Cancelling currently processing job {job_id}")
 
         job.status = JobStatus.FAILED
         job.error_message = "Cancelled by user"

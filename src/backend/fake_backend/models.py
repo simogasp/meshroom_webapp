@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 class JobStatus(Enum):
     """Job processing status enumeration."""
 
+    QUEUED = "queued"
     PENDING = "pending"
     PROCESSING = "processing"
     COMPLETED = "completed"
@@ -61,7 +62,7 @@ class ProcessingJob:
     """Represents a photogrammetry processing job."""
 
     job_id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    status: JobStatus = JobStatus.PENDING
+    status: JobStatus = JobStatus.QUEUED
     images: List[ImageData] = field(default_factory=list)
     parameters: Dict[str, Any] = field(default_factory=dict)
     progress: int = 0
@@ -70,6 +71,7 @@ class ProcessingJob:
     completed_at: Optional[datetime] = None
     error_message: Optional[str] = None
     result_file_path: Optional[str] = None
+    queue_position: Optional[int] = None
 
     @property
     def total_images(self) -> int:
@@ -90,6 +92,16 @@ class ProcessingJob:
     def is_failed(self) -> bool:
         """Check if the job has failed."""
         return self.status == JobStatus.FAILED
+
+    @property
+    def is_queued(self) -> bool:
+        """Check if the job is queued."""
+        return self.status == JobStatus.QUEUED
+
+    @property
+    def is_processing(self) -> bool:
+        """Check if the job is currently processing."""
+        return self.status == JobStatus.PROCESSING
 
     @property
     def duration_seconds(self) -> Optional[float]:

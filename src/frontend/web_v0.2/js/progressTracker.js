@@ -432,7 +432,7 @@ export class ProgressTracker {
           this.options.minEstimatedMinutes, 
           (this.progressData.queue_position - 1) * this.options.estimatedMinutesPerJob
         );
-        this.estimatedWait.textContent = `Estimated wait: ~${estimatedMinutes} minutes`;
+        this.estimatedWait.textContent = `Estimated wait: ~${this._formatWaitTime(estimatedMinutes)}`;
       }
     } 
     // If job is processing or completed, hide queue tracker

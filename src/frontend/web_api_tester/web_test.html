@@ -164,6 +164,12 @@
                 <label for="jobId">Job ID:</label>
                 <input type="text" id="jobId" placeholder="Enter job ID from upload response">
                 
+                <label for="jobSelect">Or select from existing jobs:</label>
+                <select id="jobSelect" onchange="selectExistingJob()" style="margin-bottom: 10px;">
+                    <option value="">-- Select an existing job --</option>
+                </select>
+                <button onclick="refreshJobList()" style="margin-left: 5px; padding: 5px 10px; font-size: 12px;">🔄 Refresh</button>
+                
                 <button onclick="getJobStatus()">GET /jobs/{id} (Job Status)</button>
                 <button onclick="downloadModel()">GET /jobs/{id}/download (Download Model)</button>
                 <button onclick="cancelJob()">DELETE /jobs/{id} (Cancel Job)</button>
@@ -281,7 +287,51 @@
         }
 
         async function listJobs() {
-            await apiRequest('/jobs');
+            return await apiRequest('/jobs');
+        }
+
+        // Job Selection Functions
+        async function refreshJobList() {
+            try {
+                const result = await apiRequest('/jobs');
+                const jobSelect = document.getElementById('jobSelect');
+                
+                // Clear existing options (except the default one)
+                jobSelect.innerHTML = '<option value="">-- Select an existing job --</option>';
+                
+                // The /jobs endpoint returns an array directly, not wrapped in an object
+                if (result && Array.isArray(result)) {
+                    result.forEach(job => {
+                        const option = document.createElement('option');
+                        option.value = job.job_id;
+                        
+                        // Create a descriptive label with job status and timestamp
+                        const status = job.status || 'unknown';
+                        const timestamp = job.created_at ? new Date(job.created_at).toLocaleString() : 'unknown';
+                        const queuePos = job.queue_position > 0 ? ` (pos: ${job.queue_position})` : '';
+                        
+                        option.textContent = `${job.job_id} - ${status}${queuePos} (${timestamp})`;
+                        jobSelect.appendChild(option);
+                    });
+                    
+                    addResult('✅ Job List Refreshed', `Found ${result.length} jobs`);
+                } else {
+                    addResult('ℹ️ Job List', 'No jobs found or unexpected response format');
+                }
+            } catch (error) {
+                addResult('❌ Job List Error', 'Failed to fetch job list', true);
+            }
+        }
+
+        function selectExistingJob() {
+            const jobSelect = document.getElementById('jobSelect');
+            const selectedJobId = jobSelect.value;
+            
+            if (selectedJobId) {
+                document.getElementById('jobId').value = selectedJobId;
+                currentJobId = selectedJobId;
+                addResult('✨ Job Selected', `Selected job: ${selectedJobId}`);
+            }
         }
 
         // File Upload
@@ -472,6 +522,11 @@
         window.onload = function() {
             addResult('🌟 API Tester Ready', 'Welcome to Meshroom WebApp API Tester!');
             addResult('💡 Quick Start', '1. Make sure your backend is running\n2. Test connection\n3. Upload images or use dummy upload\n4. Monitor progress with WebSocket');
+            
+            // Auto-refresh job list on load
+            setTimeout(() => {
+                refreshJobList();
+            }, 1000); // Wait 1 second to let the UI settle
         };
 
         // Auto-disconnect WebSocket on page unload

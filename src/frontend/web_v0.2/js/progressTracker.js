@@ -36,12 +36,7 @@ export class ProgressTracker {
     this.cancelling = false; // Flag to prevent multiple cancellation attempts
     
     // DOM element references
-    // Note: progressMessage is actively used for status updates during processing
-    // progressBar, progressText, and estimatedCompletion are currently unused but kept for potential future use
-    this.progressBar = document.getElementById('progressBar');
-    this.progressText = document.getElementById('progressText');
     this.progressMessage = document.getElementById('progressMessage');
-    this.estimatedCompletion = document.getElementById('estimatedCompletion');
     this.stageContainer = document.getElementById('stageProgressContainer');
     
     // Initialize UI - simplified initialization since DOM elements are already set
@@ -71,11 +66,7 @@ export class ProgressTracker {
 
     // Note: Queue tracker is used for queued jobs, stage progress for processing jobs
     // The queue tracker will be shown when job is queued, hidden when processing starts
-    // The queue tracker is used for queued jobs. The overall progress elements
-    // (progressBar, progressText, progressMessage) are required for displaying progress 
-    // during processing.
-    // Ensure these elements exist in the DOM. The queue tracker is shown when the job is 
-    // queued and hidden when processing starts.
+
     // Cancel button handler (prevent duplicate listeners)
     if (this.cancelButton && !this.cancelButton.hasAttribute('data-progress-tracker-listener')) {
       this.cancelButton.addEventListener('click', () => {

@@ -417,25 +417,41 @@ export class ProgressTracker {
       this.showQueueTracker();
       
       if (this.queuePosition) {
-        this.queuePosition.textContent = `Position #${this.progressData.queue_position}`;
+        const queuePos = this.progressData.queue_position;
+        if (typeof queuePos === 'number' && !isNaN(queuePos) && queuePos > 0) {
+          this.queuePosition.textContent = `Position #${queuePos}`;
+        } else {
+          this.queuePosition.textContent = `Position: calculating...`;
+        }
       }
       
       if (this.queueStatus) {
         const position = this.progressData.queue_position;
-        if (position === 1) {
-          this.queueStatus.textContent = "Next in queue - processing will start soon...";
+        if (typeof position === 'number' && !isNaN(position) && position > 0) {
+          if (position === 1) {
+            this.queueStatus.textContent = "Next in queue - processing will start soon...";
+          } else {
+            this.queueStatus.textContent = `Waiting in queue... ${position - 1} jobs ahead`;
+          }
         } else {
-          this.queueStatus.textContent = `Waiting in queue... ${position - 1} jobs ahead`;
+          this.queueStatus.textContent = "Waiting in queue... position calculating...";
         }
       }
       
       if (this.estimatedWait) {
-        // Configurable estimate based on jobs ahead in queue
-        const estimatedMinutes = Math.max(
-          this.options.minEstimatedMinutes, 
-          (this.progressData.queue_position - 1) * this.options.estimatedMinutesPerJob
-        );
-        this.estimatedWait.textContent = `Estimated wait: ~${this._formatWaitTime(estimatedMinutes)}`;
+        // Validate queue_position is a valid number before calculation
+        const queuePosition = this.progressData.queue_position;
+        if (typeof queuePosition === 'number' && !isNaN(queuePosition) && queuePosition > 0) {
+          // Configurable estimate based on jobs ahead in queue
+          const estimatedMinutes = Math.max(
+            this.options.minEstimatedMinutes, 
+            (queuePosition - 1) * this.options.estimatedMinutesPerJob
+          );
+          this.estimatedWait.textContent = `Estimated wait: ~${this._formatWaitTime(estimatedMinutes)}`;
+        } else {
+          // Fallback when queue position is invalid
+          this.estimatedWait.textContent = `Estimated wait: calculating...`;
+        }
       }
     } 
     // If job is processing or completed, hide queue tracker

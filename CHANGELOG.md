@@ -34,6 +34,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Includes refresh button to manually update job list
   - Auto-populates job ID field when selecting from dropdown
   - Auto-refreshes job list on page load for immediate availability
+- **Queue Position Tracker in Main Web UI**: Replaced overall progress with queue-aware interface
+  - Removed static overall progress widget that showed 0% when jobs were queued
+  - Added dynamic queue position tracker that appears when job is waiting in queue
+  - Shows current queue position, estimated wait time, and queue status messages
+  - Automatically hides when job transitions from queued to processing state
+  - Provides better user experience by showing relevant queue information instead of misleading progress
 
 ### Changed
 <!-- Changes in existing functionality -->

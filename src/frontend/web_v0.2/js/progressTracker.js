@@ -29,11 +29,10 @@ export class ProgressTracker {
     this.stages = []; // Initialize empty stages array
     this.cancelling = false; // Flag to prevent multiple cancellation attempts
     
-    // Get DOM elements
+    // Get DOM elements - simplified since we're using queue tracker instead of overall progress
     this.progressBar = document.getElementById('progressBar');
     this.progressText = document.getElementById('progressText');
     this.progressMessage = document.getElementById('progressMessage');
-    this.timeRemaining = document.getElementById('timeRemaining');
     this.estimatedCompletion = document.getElementById('estimatedCompletion');
     this.stageContainer = document.getElementById('stageProgressContainer');
     
@@ -52,16 +51,18 @@ export class ProgressTracker {
    * Setup DOM elements
    */
   setupElements() {
-    this.overallProgressBar = document.getElementById('overallProgress');
-    this.overallPercentage = document.getElementById('overallPercentage');
-    this.processingStatus = document.getElementById('processingStatus');
-    this.timeRemaining = document.getElementById('timeRemaining');
+    // Queue tracking elements (for when job is queued)
+    this.queueTracker = document.getElementById('queueTracker');
+    this.queuePosition = document.getElementById('queuePosition');
+    this.queueStatus = document.getElementById('queueStatus');
+    this.estimatedWait = document.getElementById('estimatedWait');
+    
+    // Stage progress elements (for when job is processing)
     this.stageContainer = document.getElementById('stageProgressContainer');
     this.cancelButton = document.getElementById('cancelProcessing');
 
-    if (!this.overallProgressBar) {
-      throw new Error('Progress bar elements not found');
-    }
+    // Note: No longer requiring overall progress elements since they're replaced by queue tracker
+    // The queue tracker will be shown when job is queued, hidden when processing starts
 
     // Cancel button handler (prevent duplicate listeners)
     if (this.cancelButton && !this.cancelButton.hasAttribute('data-progress-tracker-listener')) {
@@ -394,25 +395,60 @@ export class ProgressTracker {
    * Update UI elements
    */
   updateUI() {
-    this.updateOverallProgress();
+    this.updateQueueStatus();
     this.updateStageProgress();
     this.updateStatusText();
     this.updateTimeEstimate();
   }
 
   /**
-   * Update overall progress bar
+   * Update queue status or hide queue tracker when processing starts
    */
-  updateOverallProgress() {
-    // Use 'progress' from backend data, fallback to calculated progress from stages
-    const overallProgress = this.progressData.progress || this.calculateOverallProgressFromStages() || 0;
-    
-    if (this.progressBar) {
-      this.progressBar.style.width = `${overallProgress}%`;
+  updateQueueStatus() {
+    // If job is queued, show queue tracker
+    if (this.progressData.status === 'queued' && this.progressData.queue_position > 0) {
+      this.showQueueTracker();
+      
+      if (this.queuePosition) {
+        this.queuePosition.textContent = `Position #${this.progressData.queue_position}`;
+      }
+      
+      if (this.queueStatus) {
+        const position = this.progressData.queue_position;
+        if (position === 1) {
+          this.queueStatus.textContent = "Next in queue - processing will start soon...";
+        } else {
+          this.queueStatus.textContent = `Waiting in queue... ${position - 1} jobs ahead`;
+        }
+      }
+      
+      if (this.estimatedWait) {
+        // Rough estimate: 2-5 minutes per job ahead
+        const estimatedMinutes = Math.max(1, (this.progressData.queue_position - 1) * 3);
+        this.estimatedWait.textContent = `Estimated wait: ~${estimatedMinutes} minutes`;
+      }
+    } 
+    // If job is processing or completed, hide queue tracker
+    else if (this.progressData.status === 'processing' || this.progressData.status === 'completed') {
+      this.hideQueueTracker();
     }
-
-    if (this.progressText) {
-      this.progressText.textContent = `${Math.round(overallProgress)}%`;
+  }
+  
+  /**
+   * Show the queue tracker widget
+   */
+  showQueueTracker() {
+    if (this.queueTracker) {
+      this.queueTracker.classList.remove('hidden');
+    }
+  }
+  
+  /**
+   * Hide the queue tracker widget
+   */
+  hideQueueTracker() {
+    if (this.queueTracker) {
+      this.queueTracker.classList.add('hidden');
     }
   }
 
@@ -453,17 +489,12 @@ export class ProgressTracker {
   }
 
   /**
-   * Update time estimate
+   * Update time estimate (now handled by queue tracker when queued)
    */
   updateTimeEstimate() {
-    if (this.timeRemaining) {
-      if (this.progressData.estimatedTimeRemaining) {
-        const remaining = this.progressData.estimatedTimeRemaining;
-        this.timeRemaining.textContent = `Estimated time remaining: ${this.formatTime(remaining)}`;
-      } else {
-        this.timeRemaining.textContent = 'Calculating time estimate...';
-      }
-    }
+    // Time estimate is now handled in updateQueueStatus() when job is queued
+    // No overall time estimate needed when processing (stage progress shows progress)
+    return;
   }
 
   /**

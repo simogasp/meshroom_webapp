@@ -7,6 +7,8 @@
 // Default configuration constants
 const DEFAULT_ESTIMATED_MINUTES_PER_JOB = 3; // Based on typical photogrammetry processing time
 const DEFAULT_MIN_ESTIMATED_MINUTES = 1; // Minimum wait time to show meaningful estimate
+const POLLING_INTERVAL_MS = 2000; // Poll for progress updates every 2 seconds
+const COMPLETION_DISPLAY_DURATION_MS = 3000; // Show completion message for 3 seconds
 
 /**
  * Progress Tracker Class
@@ -120,6 +122,10 @@ export class ProgressTracker {
     this.progressData.lastUpdate = Date.now();
 
     this.log('info', `Starting progress tracking for job ${jobId}`);
+    
+    // Show the queue tracker and cancel button
+    this.showQueueTracker();
+    this.showCancelButton();
     
     // Try WebSocket connection first
     this.connectWebSocket();
@@ -457,6 +463,26 @@ export class ProgressTracker {
   }
 
   /**
+   * Show the cancel button
+   */
+  showCancelButton() {
+    if (this.cancelButton) {
+      this.cancelButton.classList.remove('hidden');
+      this.cancelButton.style.display = '';
+    }
+  }
+
+  /**
+   * Hide the cancel button
+   */
+  hideCancelButton() {
+    if (this.cancelButton) {
+      this.cancelButton.classList.add('hidden');
+      this.cancelButton.style.display = 'none';
+    }
+  }
+
+  /**
    * Update status text
    */
   updateStatusText() {
@@ -521,6 +547,9 @@ export class ProgressTracker {
     this.completed = true;
     this.stopTracking();
     
+    // Hide cancel button when processing is complete
+    this.hideCancelButton();
+    
     // Update to 100% completion
     this.progressData.overall = 100;
     this.progressData.stage = 'completed';
@@ -543,6 +572,9 @@ export class ProgressTracker {
 
     this.log('error', `Processing failed: ${data.error || 'Unknown error'}`);
     this.stopTracking();
+    
+    // Hide cancel button when processing fails
+    this.hideCancelButton();
     
     // Update UI to show error state
     this.progressData.stage = 'error';
@@ -582,6 +614,9 @@ export class ProgressTracker {
       await this.apiClient.cancelJob(jobIdToCancel);
       
       this.log('info', 'Processing cancelled successfully');
+      
+      // Hide cancel button since processing is cancelled
+      this.hideCancelButton();
       
       // Reset UI state
       this.reset();

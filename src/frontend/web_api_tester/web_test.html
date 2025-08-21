@@ -298,25 +298,46 @@
          * It ensures consistent error handling and provides meaningful feedback messages.
          * 
          * @param {*} result - The raw API response result from /jobs endpoint
-         * @returns {{jobs: Array<Object>|null, message: string, isError: boolean}} Normalized response object
-         * @returns {Array<Object>|null} returns.jobs - Array of job objects, or null if parsing failed
-         * @returns {string} returns.message - Human-readable message describing the parsing result
-         * @returns {boolean} returns.isError - Whether an error occurred during parsing
+         * 
+         * @returns {ParsedJobsResponse} Normalized response object with consistent structure
+         * @typedef {Object} ParsedJobsResponse
+         * @property {Array<JobObject>|null} jobs - Array of job objects when parsing succeeds, null on error
+         * @property {string} message - Human-readable status message describing the parsing result
+         * @property {boolean} isError - Indicates if an error occurred during parsing (true = error, false = success)
+         * 
+         * @typedef {Object} JobObject - Individual job object structure
+         * @property {string} job_id - Unique identifier for the job
+         * @property {string} [status] - Current job status ('queued', 'processing', 'completed', 'failed', etc.)
+         * @property {string} [created_at] - ISO timestamp when job was created
+         * @property {number} [queue_position] - Position in processing queue (for queued jobs)
+         * @property {Object} [results] - Job results (for completed jobs)
+         * @property {string} [error] - Error message (for failed jobs)
+         * 
+         * ## Return Value Scenarios:
+         * - **Success with jobs**: `{jobs: JobObject[], message: "Found N jobs", isError: false}`
+         * - **Success with no jobs**: `{jobs: [], message: "No jobs found", isError: false}`
+         * - **Parsing error**: `{jobs: null, message: "Error description", isError: true}`
          * 
          * @example
-         * // Handle direct array response
+         * // Handle direct array response from API
          * const arrayResult = [{ job_id: '123', status: 'completed' }];
          * const parsed = parseJobsResponse(arrayResult);
          * // Returns: { jobs: [...], message: 'Found 1 jobs', isError: false }
          * 
          * @example
-         * // Handle object-wrapped response
+         * // Handle object-wrapped response from API
          * const wrappedResult = { jobs: [{ job_id: '456', status: 'queued' }] };
          * const parsed = parseJobsResponse(wrappedResult);
          * // Returns: { jobs: [...], message: 'Found 1 jobs', isError: false }
          * 
          * @example
-         * // Handle error case
+         * // Handle empty response (no jobs available)
+         * const emptyResult = { jobs: [] };
+         * const parsed = parseJobsResponse(emptyResult);
+         * // Returns: { jobs: [], message: 'No jobs found', isError: false }
+         * 
+         * @example
+         * // Handle error case (null/undefined response)
          * const errorResult = null;
          * const parsed = parseJobsResponse(errorResult);
          * // Returns: { jobs: null, message: 'No data received', isError: true }

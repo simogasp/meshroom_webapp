@@ -10,17 +10,68 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 <!-- New features for the next release -->
 
+#### Backend
+
+- **FIFO Job Queue System**: Implemented sequential job processing to prevent resource contention
+  - Jobs are now queued and processed one at a time instead of concurrently
+  - Added `QUEUED` status to track jobs waiting for processing
+  - Automatic queue position tracking for all jobs
+  - Enhanced job cancellation to work with both queued and processing jobs
+- **Queue Status Monitoring**: Added comprehensive queue visibility
+  - New `queue_position` field in job responses shows position in processing queue
+  - Queue processor automatically manages job lifecycle transitions
+  - Real-time queue position updates as jobs progress
+- **GET /queue Endpoint**: New API endpoint for monitoring processing queue
+  - Returns current processing job and list of queued jobs
+  - Provides queue status information for client applications
+  - Enables real-time queue monitoring and position tracking
+
+#### Frontend
+
+- **Dynamic Job Selection in Web API Tester**: Enhanced job management interface
+  - Added combo box that dynamically fetches and displays all existing jobs
+  - Shows job status, queue position, and creation timestamp in dropdown options
+  - Includes refresh button to manually update job list
+  - Auto-populates job ID field when selecting from dropdown
+  - Auto-refreshes job list on page load for immediate availability
+
 ### Changed
 <!-- Changes in existing functionality -->
+
+#### Backend
+<!-- Backend changes -->
+
+#### Frontend
+<!-- Frontend changes -->
 
 ### Fixed
 <!-- Bug fixes -->
 
+#### Frontend
+
+- **Web API Tester Upload Button**: Fixed upload button not responding when clicked
+  - Corrected event listener to properly call `uploadImages()` function
+  - Removed duplicate/broken upload handler with incorrect DOM element references
+  - Added "Generate Dummy Upload" button for easier testing without real files
+  - Added GET /queue endpoint button to test queue status functionality
+
 ### Removed
 <!-- Removed features -->
 
+#### Backend
+<!-- Backend removals -->
+
+#### Frontend
+<!-- Frontend removals -->
+
 ### Security
 <!-- Security improvements -->
+
+#### Backend
+<!-- Backend security improvements -->
+
+#### Frontend
+<!-- Frontend security improvements -->
 
 ## [v0.2.0] - 2025-08-19
 

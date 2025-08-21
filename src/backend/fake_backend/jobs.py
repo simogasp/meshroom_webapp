@@ -274,7 +274,7 @@ class JobManager:
             del self._connections[connection_id]
 
             # Remove from job subscriptions
-            for job_id, conn_ids in self._job_subscriptions.items():
+            for _, conn_ids in self._job_subscriptions.items():
                 conn_ids.discard(connection_id)
 
             logger.info(f"Unregistered WebSocket {connection_id}")

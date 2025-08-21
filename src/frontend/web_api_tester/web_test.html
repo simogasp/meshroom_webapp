@@ -290,6 +290,54 @@
             return await apiRequest('/jobs');
         }
 
+        /**
+         * Helper function to extract jobs array from API response
+         * Handles both direct array responses and object-wrapped responses
+         * @param {*} result - The API response result
+         * @returns {{jobs: Array|null, message: string, isError: boolean}}
+         */
+        function parseJobsResponse(result) {
+            if (!result) {
+                return { jobs: null, message: 'No data received', isError: true };
+            }
+            
+            // Handle direct array response
+            if (Array.isArray(result)) {
+                return { jobs: result, message: `Found ${result.length} jobs`, isError: false };
+            }
+            
+            // Handle object-wrapped response (e.g., { jobs: [...] })
+            if (typeof result === 'object' && Array.isArray(result.jobs)) {
+                return { jobs: result.jobs, message: `Found ${result.jobs.length} jobs`, isError: false };
+            }
+            
+            // Handle empty object response (valid but no jobs)
+            if (typeof result === 'object' && result !== null) {
+                return { jobs: [], message: 'No jobs found', isError: false };
+            }
+            
+            // Handle unexpected response format
+            return { jobs: null, message: 'Unexpected response format', isError: true };
+        }
+
+        /**
+         * Helper function to create job option element with descriptive label
+         * @param {Object} job - Job object from API response
+         * @returns {HTMLOptionElement}
+         */
+        function createJobOption(job) {
+            const option = document.createElement('option');
+            option.value = job.job_id;
+            
+            // Create a descriptive label with job status and timestamp
+            const status = job.status || 'unknown';
+            const timestamp = job.created_at ? new Date(job.created_at).toLocaleString() : 'unknown';
+            const queuePos = job.queue_position > 0 ? ` (pos: ${job.queue_position})` : '';
+            
+            option.textContent = `${job.job_id} - ${status}${queuePos} (${timestamp})`;
+            return option;
+        }
+
         // Job Selection Functions
         async function refreshJobList() {
             try {
@@ -299,33 +347,20 @@
                 // Clear existing options (except the default one)
                 jobSelect.innerHTML = '<option value="">-- Select an existing job --</option>';
                 
-                // Handle both array directly or wrapped in an object (e.g., { jobs: [...] })
-                let jobs = null;
-                if (result && Array.isArray(result)) {
-                    jobs = result;
-                } else if (result && typeof result === 'object' && Array.isArray(result.jobs)) {
-                    jobs = result.jobs;
-                }
+                // Parse response using helper function
+                const { jobs, message, isError } = parseJobsResponse(result);
                 
-                if (jobs && Array.isArray(jobs)) {
+                if (jobs && jobs.length > 0) {
+                    // Populate dropdown with job options
                     jobs.forEach(job => {
-                        const option = document.createElement('option');
-                        option.value = job.job_id;
-                        
-                        // Create a descriptive label with job status and timestamp
-                        const status = job.status || 'unknown';
-                        const timestamp = job.created_at ? new Date(job.created_at).toLocaleString() : 'unknown';
-                        const queuePos = job.queue_position > 0 ? ` (pos: ${job.queue_position})` : '';
-                        
-                        option.textContent = `${job.job_id} - ${status}${queuePos} (${timestamp})`;
+                        const option = createJobOption(job);
                         jobSelect.appendChild(option);
                     });
-                    
-                    addResult('✅ Job List Refreshed', `Found ${jobs.length} jobs`);
-                } else if (result && (Array.isArray(result) || (typeof result === 'object' && result !== null))) {
-                    addResult('ℹ️ Job List', 'No jobs found');
+                    addResult('✅ Job List Refreshed', message);
+                } else if (!isError) {
+                    addResult('ℹ️ Job List', message);
                 } else {
-                    addResult('❌ Job List Error', 'Unexpected response format', true);
+                    addResult('❌ Job List Error', message, true);
                 }
             } catch (error) {
                 addResult('❌ Job List Error', 'Failed to fetch job list', true);

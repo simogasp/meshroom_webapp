@@ -68,6 +68,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added "Generate Dummy Upload" button for easier testing without real files
   - Added GET /queue endpoint button to test queue status functionality
 
+- **Cancel button visibility logic** [PR#11](https://github.com/simogasp/meshroom_webapp/pull/11)
+  Improves UX by only showing cancel button when relevant
+
 ### Removed
 <!-- Removed features -->
 

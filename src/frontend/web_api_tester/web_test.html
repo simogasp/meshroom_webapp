@@ -138,6 +138,7 @@
                 <h2>📊 Server Information</h2>
                 <button onclick="getServerStatus()">GET / (Server Status)</button>
                 <button onclick="getHealth()">GET /health (Health Check)</button>
+                <button onclick="getQueueStatus()">GET /queue (Queue Status)</button>
                 <button onclick="listJobs()">GET /jobs (List All Jobs)</button>
             </div>
 
@@ -154,6 +155,7 @@
                 </div>
 
                 <button id="uploadBtn">Upload</button>
+                <button onclick="generateDummyUpload()">Generate Dummy Upload</button>
             </div>
 
             <!-- Job Management -->
@@ -272,6 +274,10 @@
 
         async function getHealth() {
             await apiRequest('/health');
+        }
+
+        async function getQueueStatus() {
+            await apiRequest('/queue');
         }
 
         async function listJobs() {
@@ -475,31 +481,7 @@
             }
         };
 
-        document.getElementById('uploadBtn').addEventListener('click', async () => {
-            const input = document.getElementById('files');
-            if (!input.files || input.files.length === 0) {
-                alert('Select at least one image');
-                return;
-            }
-            const formData = new FormData();
-            for (const file of input.files) {
-                formData.append('files', file);
-            }
-            const paramsText = document.getElementById('parametersJson').value.trim();
-            if (paramsText) {
-                try {
-                    JSON.parse(paramsText);
-                    formData.append('parameters', paramsText);
-                } catch (e) {
-                    alert('Parameters JSON is invalid');
-                    return;
-                }
-            }
-            const res = await fetch('http://localhost:8000/upload', { method: 'POST', body: formData });
-            const text = await res.text();
-            console.log('Upload response', res.status, text);
-            alert(`Status: ${res.status}`);
-        });
+        document.getElementById('uploadBtn').addEventListener('click', uploadImages);
     </script>
 </body>
 </html>

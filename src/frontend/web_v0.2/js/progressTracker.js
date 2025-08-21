@@ -399,7 +399,6 @@ export class ProgressTracker {
     this.updateQueueStatus();
     this.updateStageProgress();
     this.updateStatusText();
-    this.updateTimeEstimate();
   }
 
   /**
@@ -487,14 +486,6 @@ export class ProgressTracker {
       const statusText = this.progressData.message || 'Processing...';
       this.progressMessage.textContent = statusText;
     }
-  }
-
-  /**
-   * Update time estimate (now handled by queue tracker when queued)
-   */
-  updateTimeEstimate() {
-    // Time estimate is now handled in updateQueueStatus() when job is queued
-    // No overall time estimate needed when processing (stage progress shows progress)
   }
 
   /**

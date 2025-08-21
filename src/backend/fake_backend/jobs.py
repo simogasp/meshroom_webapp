@@ -493,7 +493,8 @@ class JobManager:
 
         # Handle different cancellation scenarios
         if job.status == JobStatus.QUEUED:
-            # Remove from queue
+            # Remove from queue - O(n) operation but acceptable since cancellation is rare
+            # compared to normal queue processing which uses O(1) popleft()
             try:
                 self._job_queue.remove(job_id)
                 self._update_queue_positions()

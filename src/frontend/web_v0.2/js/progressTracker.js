@@ -4,6 +4,10 @@
  * @module ProgressTracker
  */
 
+// Default configuration constants
+const DEFAULT_ESTIMATED_MINUTES_PER_JOB = 3; // Based on typical photogrammetry processing time
+const DEFAULT_MIN_ESTIMATED_MINUTES = 1; // Minimum wait time to show meaningful estimate
+
 /**
  * Progress Tracker Class
  * Manages real-time progress updates and stage tracking
@@ -14,8 +18,8 @@ export class ProgressTracker {
       updateInterval: 100,
       pollInterval: 2000, // Poll every 2 seconds
       smoothingFactor: 0.1,
-      estimatedMinutesPerJob: 3, // Estimated processing time per job in queue
-      minEstimatedMinutes: 1, // Minimum estimated wait time to display
+      estimatedMinutesPerJob: DEFAULT_ESTIMATED_MINUTES_PER_JOB, // Estimated processing time per job in queue
+      minEstimatedMinutes: DEFAULT_MIN_ESTIMATED_MINUTES, // Minimum estimated wait time to display
       onProgressUpdate: () => {},
       onCompletion: () => {},
       onError: () => {},
@@ -406,7 +410,7 @@ export class ProgressTracker {
    */
   updateQueueStatus() {
     // If job is queued, show queue tracker
-    if (this.progressData.status === 'queued' && this.progressData.queue_position > 0) {
+    if (this.progressData.status === 'queued') {
       this.showQueueTracker();
       
       if (this.queuePosition) {

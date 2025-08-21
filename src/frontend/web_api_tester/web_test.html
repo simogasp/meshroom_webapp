@@ -299,9 +299,16 @@
                 // Clear existing options (except the default one)
                 jobSelect.innerHTML = '<option value="">-- Select an existing job --</option>';
                 
-                // The /jobs endpoint returns an array directly, not wrapped in an object
+                // Handle both array directly or wrapped in an object (e.g., { jobs: [...] })
+                let jobs = null;
                 if (result && Array.isArray(result)) {
-                    result.forEach(job => {
+                    jobs = result;
+                } else if (result && typeof result === 'object' && Array.isArray(result.jobs)) {
+                    jobs = result.jobs;
+                }
+                
+                if (jobs && Array.isArray(jobs)) {
+                    jobs.forEach(job => {
                         const option = document.createElement('option');
                         option.value = job.job_id;
                         
@@ -314,9 +321,11 @@
                         jobSelect.appendChild(option);
                     });
                     
-                    addResult('✅ Job List Refreshed', `Found ${result.length} jobs`);
+                    addResult('✅ Job List Refreshed', `Found ${jobs.length} jobs`);
+                } else if (result && (Array.isArray(result) || (typeof result === 'object' && result !== null))) {
+                    addResult('ℹ️ Job List', 'No jobs found');
                 } else {
-                    addResult('ℹ️ Job List', 'No jobs found or unexpected response format');
+                    addResult('❌ Job List Error', 'Unexpected response format', true);
                 }
             } catch (error) {
                 addResult('❌ Job List Error', 'Failed to fetch job list', true);

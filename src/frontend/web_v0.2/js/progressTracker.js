@@ -460,22 +460,6 @@ export class ProgressTracker {
   }
 
   /**
-   * Calculate overall progress from stage information (fallback method)
-   */
-  calculateOverallProgressFromStages() {
-    if (!this.progressData.message) return 0;
-    
-    const stageInfo = this.parseStageMessage(this.progressData.message);
-    if (!stageInfo) return 0;
-    
-    const { stageIdx, numStages, stageProgress } = stageInfo;
-    // Calculate overall progress: (completed stages + current stage progress) / total stages
-    const completedStages = Math.max(0, stageIdx - 1);
-    const overallProgress = (completedStages * 100 + stageProgress) / numStages;
-    return Math.min(100, Math.max(0, overallProgress));
-  }
-
-  /**
    * Update status text
    */
   updateStatusText() {

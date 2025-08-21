@@ -469,6 +469,27 @@ export class ProgressTracker {
       this.progressMessage.textContent = statusText;
     }
   }
+  
+  /**
+   * Format wait time in minutes to a readable string
+   * @param {number} minutes - Time in minutes
+   * @returns {string} Formatted time string
+   */
+  _formatWaitTime(minutes) {
+    if (minutes < 1) {
+      return "< 1 min";
+    } else if (minutes < 60) {
+      return `${Math.round(minutes)} min`;
+    } else {
+      const hours = Math.floor(minutes / 60);
+      const remainingMinutes = Math.round(minutes % 60);
+      if (remainingMinutes === 0) {
+        return `${hours}h`;
+      } else {
+        return `${hours}h ${remainingMinutes}m`;
+      }
+    }
+  }
 
   /**
    * Format time duration

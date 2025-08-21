@@ -313,7 +313,7 @@ class JobManager:
                 # Get next job from queue
                 job_id = (
                     self._job_queue.popleft()
-                job_id = self._job_queue.popleft()  # FIFO - take from front with O(1) performance
+                )  # FIFO - take from front with O(1) performance
                 job = self._jobs.get(job_id)
 
                 if not job or job.status != JobStatus.QUEUED:

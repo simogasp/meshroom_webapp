@@ -67,7 +67,9 @@ export class ProgressTracker {
     this.stageContainer = document.getElementById('stageProgressContainer');
     this.cancelButton = document.getElementById('cancelProcessing');
 
-    // Note: No longer requiring overall progress elements since they're replaced by queue tracker
+    // Note: The queue tracker is now used for queued jobs, but overall progress elements
+    // (progressBar, progressText, progressMessage) are still referenced and may be required
+    // for displaying progress during processing. Ensure these elements exist in the DOM if needed.
     // The queue tracker will be shown when job is queued, hidden when processing starts
 
     // Cancel button handler (prevent duplicate listeners)

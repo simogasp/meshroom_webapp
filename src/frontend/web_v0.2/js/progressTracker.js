@@ -495,7 +495,6 @@ export class ProgressTracker {
   updateTimeEstimate() {
     // Time estimate is now handled in updateQueueStatus() when job is queued
     // No overall time estimate needed when processing (stage progress shows progress)
-    return;
   }
 
   /**

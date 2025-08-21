@@ -9,6 +9,7 @@ import asyncio
 import logging
 import os
 import random
+from collections import deque
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Set
 
@@ -106,7 +107,7 @@ class JobManager:
         self._jobs: Dict[str, ProcessingJob] = {}
         self._connections: Dict[str, WebSocket] = {}
         self._job_subscriptions: Dict[str, Set[str]] = {}  # job_id -> connection_ids
-        self._job_queue: List[str] = []  # FIFO queue of job IDs
+        self._job_queue: deque[str] = deque()  # FIFO queue of job IDs
         self._current_processing_job: Optional[str] = None
         self._processing_task: Optional[asyncio.Task] = None
         self._queue_processor_running = False
@@ -310,7 +311,9 @@ class JobManager:
                     continue
 
                 # Get next job from queue
-                job_id = self._job_queue.pop(0)  # FIFO - take from front
+                job_id = (
+                    self._job_queue.popleft()
+                )  # FIFO - take from front with O(1) performance
                 job = self._jobs.get(job_id)
 
                 if not job or job.status != JobStatus.QUEUED:

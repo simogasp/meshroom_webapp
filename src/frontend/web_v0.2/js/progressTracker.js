@@ -15,6 +15,7 @@ export class ProgressTracker {
       pollInterval: 2000, // Poll every 2 seconds
       smoothingFactor: 0.1,
       estimatedMinutesPerJob: 3, // Estimated processing time per job in queue
+      minEstimatedMinutes: 1, // Minimum estimated wait time to display
       onProgressUpdate: () => {},
       onCompletion: () => {},
       onError: () => {},
@@ -397,7 +398,6 @@ export class ProgressTracker {
    */
   updateUI() {
     this.updateQueueStatus();
-    this.updateStageProgress();
     this.updateStatusText();
   }
 
@@ -424,7 +424,10 @@ export class ProgressTracker {
       
       if (this.estimatedWait) {
         // Configurable estimate based on jobs ahead in queue
-        const estimatedMinutes = Math.max(1, (this.progressData.queue_position - 1) * this.options.estimatedMinutesPerJob);
+        const estimatedMinutes = Math.max(
+          this.options.minEstimatedMinutes, 
+          (this.progressData.queue_position - 1) * this.options.estimatedMinutesPerJob
+        );
         this.estimatedWait.textContent = `Estimated wait: ~${estimatedMinutes} minutes`;
       }
     } 
@@ -466,15 +469,6 @@ export class ProgressTracker {
     const completedStages = Math.max(0, stageIdx - 1);
     const overallProgress = (completedStages * 100 + stageProgress) / numStages;
     return Math.min(100, Math.max(0, overallProgress));
-  }
-
-  /**
-   * Update stage progress indicators (legacy method - now handled by dynamic system)
-   */
-  updateStageProgress() {
-    // This method is now handled by updateDynamicStageProgress
-    // Keep for compatibility but no longer needed
-    return;
   }
 
   /**

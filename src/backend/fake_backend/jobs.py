@@ -110,6 +110,7 @@ class JobManager:
         self._current_processing_job: Optional[str] = None
         self._processing_task: Optional[asyncio.Task] = None
         self._queue_processor_running = False
+        self._queue_event = asyncio.Event()  # Event to wake queue processor
 
     @property
     def active_jobs_count(self) -> int:
@@ -148,6 +149,9 @@ class JobManager:
         # Add job to storage
         self._jobs[job.job_id] = job
 
+        # Transition from PENDING to QUEUED (maintaining backward compatibility)
+        job.status = JobStatus.QUEUED
+
         # Add to queue and set queue position
         self._job_queue.append(job.job_id)
         job.queue_position = len(self._job_queue)
@@ -159,6 +163,9 @@ class JobManager:
         # Start queue processor if not running
         if not self._queue_processor_running:
             asyncio.create_task(self._process_queue())
+        else:
+            # Wake up queue processor for new job
+            self._queue_event.set()
 
         return job.job_id
 
@@ -297,7 +304,9 @@ class JobManager:
             while True:
                 # Check if there are jobs to process
                 if not self._job_queue or self._current_processing_job is not None:
-                    await asyncio.sleep(1)  # Wait and check again
+                    # Wait for new jobs to be added to the queue
+                    await self._queue_event.wait()
+                    self._queue_event.clear()
                     continue
 
                 # Get next job from queue
@@ -334,6 +343,8 @@ class JobManager:
                     job.error_message = str(e)
                 finally:
                     self._current_processing_job = None
+                    # Wake up processor to check for next job
+                    self._queue_event.set()
 
         except Exception as e:
             logger.error(f"Queue processor error: {e}")

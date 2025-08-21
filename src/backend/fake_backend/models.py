@@ -62,7 +62,7 @@ class ProcessingJob:
     """Represents a photogrammetry processing job."""
 
     job_id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    status: JobStatus = JobStatus.QUEUED
+    status: JobStatus = JobStatus.PENDING
     images: List[ImageData] = field(default_factory=list)
     parameters: Dict[str, Any] = field(default_factory=dict)
     progress: int = 0

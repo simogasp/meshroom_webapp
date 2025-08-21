@@ -15,13 +15,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **FIFO Job Queue System** [PR#11](https://github.com/simogasp/meshroom_webapp/pull/11)
   Implemented sequential job processing to prevent resource contention
   - Jobs are now queued and processed one at a time instead of concurrently
-  - Added `QUEUED` status to track jobs waiting for processing
+  - Added `QUEUED` status to track jobs waiting for processing (maintains backward compatibility with PENDING default)
   - Automatic queue position tracking for all jobs
   - Enhanced job cancellation to work with both queued and processing jobs
 - **Queue Status Monitoring** [PR#11](https://github.com/simogasp/meshroom_webapp/pull/11)
-  Added comprehensive queue visibility
+  Added comprehensive queue visibility with efficient processing
   - New `queue_position` field in job responses shows position in processing queue
-  - Queue processor automatically manages job lifecycle transitions
+  - Event-driven queue processor using asyncio.Event for efficient resource usage
   - Real-time queue position updates as jobs progress
 - **GET /queue Endpoint** [PR#11](https://github.com/simogasp/meshroom_webapp/pull/11)
   New API endpoint for monitoring processing queue
@@ -37,12 +37,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Shows job status, queue position, and creation timestamp in dropdown options
   - Includes refresh button to manually update job list
   - Auto-populates job ID field when selecting from dropdown
-  - Auto-refreshes job list on page load for immediate availability
+  - Reliable synchronous job list loading on page initialization
 - **Queue Position Tracker in Main Web UI** [PR#11](https://github.com/simogasp/meshroom_webapp/pull/11)
   Replaced overall progress with queue-aware interface
   - Removed static overall progress widget that showed 0% when jobs were queued
   - Added dynamic queue position tracker that appears when job is waiting in queue
   - Shows current queue position, estimated wait time, and queue status messages
+  - Configurable time estimation algorithm (default 3 minutes per job ahead)
   - Automatically hides when job transitions from queued to processing state
   - Provides better user experience by showing relevant queue information instead of misleading progress
 

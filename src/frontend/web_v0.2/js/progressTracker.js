@@ -14,6 +14,7 @@ export class ProgressTracker {
       updateInterval: 100,
       pollInterval: 2000, // Poll every 2 seconds
       smoothingFactor: 0.1,
+      estimatedMinutesPerJob: 3, // Estimated processing time per job in queue
       onProgressUpdate: () => {},
       onCompletion: () => {},
       onError: () => {},
@@ -423,8 +424,8 @@ export class ProgressTracker {
       }
       
       if (this.estimatedWait) {
-        // Rough estimate: 2-5 minutes per job ahead
-        const estimatedMinutes = Math.max(1, (this.progressData.queue_position - 1) * 3);
+        // Configurable estimate based on jobs ahead in queue
+        const estimatedMinutes = Math.max(1, (this.progressData.queue_position - 1) * this.options.estimatedMinutesPerJob);
         this.estimatedWait.textContent = `Estimated wait: ~${estimatedMinutes} minutes`;
       }
     } 

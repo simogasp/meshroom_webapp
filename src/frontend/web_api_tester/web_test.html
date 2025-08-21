@@ -524,9 +524,7 @@
             addResult('💡 Quick Start', '1. Make sure your backend is running\n2. Test connection\n3. Upload images or use dummy upload\n4. Monitor progress with WebSocket');
             
             // Auto-refresh job list on load
-            setTimeout(() => {
-                refreshJobList();
-            }, 1000); // Wait 1 second to let the UI settle
+            refreshJobList();
         };
 
         // Auto-disconnect WebSocket on page unload

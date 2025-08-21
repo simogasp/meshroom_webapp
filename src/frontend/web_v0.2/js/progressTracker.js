@@ -5,7 +5,10 @@
  */
 
 // Default configuration constants
-const DEFAULT_ESTIMATED_MINUTES_PER_JOB = 3; // Based on typical photogrammetry processing time
+// Default estimated processing time per job in minutes.
+// The value of 3 minutes is based on observed average processing times for typical photogrammetry jobs in our environment.
+// This value can be configured via the ProgressTracker options to better match different workloads or processing scenarios.
+const DEFAULT_ESTIMATED_MINUTES_PER_JOB = 3;
 const DEFAULT_MIN_ESTIMATED_MINUTES = 1; // Minimum wait time to show meaningful estimate
 const POLLING_INTERVAL_MS = 2000; // Poll for progress updates every 2 seconds
 const COMPLETION_DISPLAY_DURATION_MS = 3000; // Show completion message for 3 seconds

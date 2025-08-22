@@ -589,15 +589,13 @@ async def upload_images(
         # Update job with images
         job.images = images
 
-        # Register job with manager
+        # Register job with manager (automatically queued for processing)
         job_id = job_manager.create_job(job)
-
-        # Start processing asynchronously
-        await job_manager.start_processing(job_id)
 
         logger.info(
             f"Created job {job_id} with {len(images)} images "
-            f"({total_size / 1024 / 1024:.1f} MB total) in {job_dirs['job_dir']}"
+            f"({total_size / 1024 / 1024:.1f} MB total) in {job_dirs['job_dir']} "
+            f"(queue position: {job.queue_position})"
         )
 
         return JobResponse(
@@ -611,6 +609,17 @@ async def upload_images(
     except (OSError, IOError, ValueError) as e:
         logger.error(f"Upload failed: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@app.get("/queue")
+async def get_queue_status() -> Dict[str, Any]:
+    """
+    Get current processing queue status.
+
+    Returns:
+        Queue status information including current processing job and queued jobs
+    """
+    return job_manager.get_queue_status()
 
 
 @app.get("/jobs/{job_id}")
@@ -643,6 +652,7 @@ async def get_job_status(job_id: str) -> Dict[str, Any]:
         "duration_seconds": job.duration_seconds,
         "error_message": job.error_message,
         "result_file_path": job.result_file_path,
+        "queue_position": job.queue_position,
     }
 
 

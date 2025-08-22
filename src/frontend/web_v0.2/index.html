@@ -122,17 +122,24 @@
                 </div>
 
                 <div class="processing-container">
-                    <!-- Overall Progress -->
-                    <div class="overall-progress">
-                        <div class="progress-header">
-                            <span class="progress-title">Overall Progress</span>
-                            <span id="overallPercentage" class="progress-percentage">0%</span>
+                    <!-- Queue Position Tracker (appears only when job is queued) -->
+                    <div id="queueTracker" class="queue-tracker hidden">
+                        <div class="queue-header">
+                            <span class="queue-title">🕐 Processing Queue</span>
+                            <span id="queuePosition" class="queue-position">Position #0</span>
                         </div>
-                        <div class="progress-bar">
-                            <div id="overallProgress" class="progress-fill"></div>
+                        <div class="queue-info">
+                            <div id="queueStatus" class="queue-status">Waiting in queue...</div>
+                            <div id="estimatedWait" class="estimated-wait"></div>
                         </div>
-                        <div id="processingStatus" class="processing-status">Ready to start...</div>
-                        <div id="timeRemaining" class="time-remaining"></div>
+                        <div class="queue-visual">
+                            <div class="queue-items">
+                                <div id="queueIndicator" class="queue-indicator">
+                                    <span class="queue-dot active"></span>
+                                    <span class="queue-label">Your Job</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Stage Progress Bars -->

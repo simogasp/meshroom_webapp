@@ -138,6 +138,7 @@
                 <h2>📊 Server Information</h2>
                 <button onclick="getServerStatus()">GET / (Server Status)</button>
                 <button onclick="getHealth()">GET /health (Health Check)</button>
+                <button onclick="getQueueStatus()">GET /queue (Queue Status)</button>
                 <button onclick="listJobs()">GET /jobs (List All Jobs)</button>
             </div>
 
@@ -154,6 +155,7 @@
                 </div>
 
                 <button id="uploadBtn">Upload</button>
+                <button onclick="generateDummyUpload()">Generate Dummy Upload</button>
             </div>
 
             <!-- Job Management -->
@@ -161,6 +163,12 @@
                 <h2>🔧 Job Management</h2>
                 <label for="jobId">Job ID:</label>
                 <input type="text" id="jobId" placeholder="Enter job ID from upload response">
+                
+                <label for="jobSelect">Or select from existing jobs:</label>
+                <select id="jobSelect" onchange="selectExistingJob()" style="margin-bottom: 10px;">
+                    <option value="">-- Select an existing job --</option>
+                </select>
+                <button onclick="refreshJobList()" style="margin-left: 5px; padding: 5px 10px; font-size: 12px;">🔄 Refresh</button>
                 
                 <button onclick="getJobStatus()">GET /jobs/{id} (Job Status)</button>
                 <button onclick="downloadModel()">GET /jobs/{id}/download (Download Model)</button>
@@ -274,8 +282,166 @@
             await apiRequest('/health');
         }
 
+        async function getQueueStatus() {
+            await apiRequest('/queue');
+        }
+
         async function listJobs() {
-            await apiRequest('/jobs');
+            return await apiRequest('/jobs');
+        }
+
+        /**
+         * Parses and normalizes job list API responses into a consistent format
+         * 
+         * This utility function handles various response formats from the jobs API endpoint,
+         * providing robust parsing for both direct array responses and object-wrapped responses.
+         * It ensures consistent error handling and provides meaningful feedback messages.
+         * 
+         * @param {*} result - The raw API response result from /jobs endpoint
+         * 
+         * @returns {ParsedJobsResponse} Normalized response object with consistent structure
+         * @typedef {Object} ParsedJobsResponse
+         * @property {Array<JobObject>|null} jobs - Array of job objects when parsing succeeds, null on error
+         * @property {string} message - Human-readable status message describing the parsing result
+         * @property {boolean} isError - Indicates if an error occurred during parsing (true = error, false = success)
+         * 
+         * @typedef {Object} JobObject - Individual job object structure
+         * @property {string} job_id - Unique identifier for the job
+         * @property {string} [status] - Current job status ('queued', 'processing', 'completed', 'failed', etc.)
+         * @property {string} [created_at] - ISO timestamp when job was created
+         * @property {number} [queue_position] - Position in processing queue (for queued jobs)
+         * @property {Object} [results] - Job results (for completed jobs)
+         * @property {string} [error] - Error message (for failed jobs)
+         * 
+         * ## Return Value Scenarios:
+         * - **Success with jobs**: `{jobs: JobObject[], message: "Found N jobs", isError: false}`
+         * - **Success with no jobs**: `{jobs: [], message: "No jobs found", isError: false}`
+         * - **Parsing error**: `{jobs: null, message: "Error description", isError: true}`
+         * 
+         * @example
+         * // Handle direct array response from API
+         * const arrayResult = [{ job_id: '123', status: 'completed' }];
+         * const parsed = parseJobsResponse(arrayResult);
+         * // Returns: { jobs: [...], message: 'Found 1 jobs', isError: false }
+         * 
+         * @example
+         * // Handle object-wrapped response from API
+         * const wrappedResult = { jobs: [{ job_id: '456', status: 'queued' }] };
+         * const parsed = parseJobsResponse(wrappedResult);
+         * // Returns: { jobs: [...], message: 'Found 1 jobs', isError: false }
+         * 
+         * @example
+         * // Handle empty response (no jobs available)
+         * const emptyResult = { jobs: [] };
+         * const parsed = parseJobsResponse(emptyResult);
+         * // Returns: { jobs: [], message: 'No jobs found', isError: false }
+         * 
+         * @example
+         * // Handle error case (null/undefined response)
+         * const errorResult = null;
+         * const parsed = parseJobsResponse(errorResult);
+         * // Returns: { jobs: null, message: 'No data received', isError: true }
+         * 
+         * @since 1.0.0
+         */
+        function parseJobsResponse(result) {
+            if (!result) {
+                return { jobs: null, message: 'No data received', isError: true };
+            }
+            
+            // Handle direct array response
+            if (Array.isArray(result)) {
+                return { jobs: result, message: `Found ${result.length} jobs`, isError: false };
+            }
+            
+            // Handle object-wrapped response (e.g., { jobs: [...] })
+            if (typeof result === 'object' && Array.isArray(result.jobs)) {
+                return { jobs: result.jobs, message: `Found ${result.jobs.length} jobs`, isError: false };
+            }
+            
+            // Handle empty object response (valid but no jobs)
+            if (typeof result === 'object' && result !== null) {
+                return { jobs: [], message: 'No jobs found', isError: false };
+            }
+            
+            // Handle unexpected response format
+            return { jobs: null, message: 'Unexpected response format', isError: true };
+        }
+
+        /**
+         * Creates an HTML option element for a job with a descriptive label
+         * 
+         * Generates a user-friendly option element that displays job information including
+         * status, queue position (if queued), and creation timestamp for easy job identification.
+         * 
+         * @param {Object} job - Job object from the API response
+         * @param {string} job.job_id - Unique identifier for the job
+         * @param {string} [job.status] - Current status of the job (e.g., 'queued', 'processing', 'completed')
+         * @param {string} [job.created_at] - ISO timestamp when the job was created
+         * @param {number} [job.queue_position] - Position in queue (only for queued jobs, > 0)
+         * @returns {HTMLOptionElement} A configured option element ready for insertion into a select dropdown
+         * 
+         * @example
+         * const job = {
+         *   job_id: '123-456-789',
+         *   status: 'queued',
+         *   created_at: '2025-08-21T19:30:00Z',
+         *   queue_position: 2
+         * };
+         * const option = createJobOption(job);
+         * // option.textContent = "123-456-789 - queued (pos: 2) (8/21/2025, 7:30:00 PM)"
+         */
+        function createJobOption(job) {
+            const option = document.createElement('option');
+            option.value = job.job_id;
+            
+            // Create a descriptive label with job status and timestamp
+            const status = job.status || 'unknown';
+            const timestamp = job.created_at ? new Date(job.created_at).toLocaleString() : 'unknown';
+            const queuePos = job.queue_position > 0 ? ` (pos: ${job.queue_position})` : '';
+            
+            option.textContent = `${job.job_id} - ${status}${queuePos} (${timestamp})`;
+            return option;
+        }
+
+        // Job Selection Functions
+        async function refreshJobList() {
+            try {
+                const result = await apiRequest('/jobs');
+                const jobSelect = document.getElementById('jobSelect');
+                
+                // Clear existing options (except the default one)
+                jobSelect.innerHTML = '<option value="">-- Select an existing job --</option>';
+                
+                // Parse response using helper function
+                const { jobs, message, isError } = parseJobsResponse(result);
+                
+                if (jobs && jobs.length > 0) {
+                    // Populate dropdown with job options
+                    jobs.forEach(job => {
+                        const option = createJobOption(job);
+                        jobSelect.appendChild(option);
+                    });
+                    addResult('✅ Job List Refreshed', message);
+                } else if (!isError) {
+                    addResult('ℹ️ Job List', message);
+                } else {
+                    addResult('❌ Job List Error', message, true);
+                }
+            } catch (error) {
+                addResult('❌ Job List Error', 'Failed to fetch job list', true);
+            }
+        }
+
+        function selectExistingJob() {
+            const jobSelect = document.getElementById('jobSelect');
+            const selectedJobId = jobSelect.value;
+            
+            if (selectedJobId) {
+                document.getElementById('jobId').value = selectedJobId;
+                currentJobId = selectedJobId;
+                addResult('✨ Job Selected', `Selected job: ${selectedJobId}`);
+            }
         }
 
         // File Upload
@@ -466,6 +632,9 @@
         window.onload = function() {
             addResult('🌟 API Tester Ready', 'Welcome to Meshroom WebApp API Tester!');
             addResult('💡 Quick Start', '1. Make sure your backend is running\n2. Test connection\n3. Upload images or use dummy upload\n4. Monitor progress with WebSocket');
+            
+            // Auto-refresh job list on load
+            refreshJobList();
         };
 
         // Auto-disconnect WebSocket on page unload
@@ -475,31 +644,7 @@
             }
         };
 
-        document.getElementById('uploadBtn').addEventListener('click', async () => {
-            const input = document.getElementById('files');
-            if (!input.files || input.files.length === 0) {
-                alert('Select at least one image');
-                return;
-            }
-            const formData = new FormData();
-            for (const file of input.files) {
-                formData.append('files', file);
-            }
-            const paramsText = document.getElementById('parametersJson').value.trim();
-            if (paramsText) {
-                try {
-                    JSON.parse(paramsText);
-                    formData.append('parameters', paramsText);
-                } catch (e) {
-                    alert('Parameters JSON is invalid');
-                    return;
-                }
-            }
-            const res = await fetch('http://localhost:8000/upload', { method: 'POST', body: formData });
-            const text = await res.text();
-            console.log('Upload response', res.status, text);
-            alert(`Status: ${res.status}`);
-        });
+        document.getElementById('uploadBtn').addEventListener('click', uploadImages);
     </script>
 </body>
 </html>

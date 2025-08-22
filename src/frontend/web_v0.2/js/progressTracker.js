@@ -4,6 +4,15 @@
  * @module ProgressTracker
  */
 
+// Default configuration constants
+// Default estimated processing time per job in minutes.
+// The value of 3 minutes is based on observed average processing times for typical photogrammetry jobs in our environment.
+// This value can be configured via the ProgressTracker options to better match different workloads or processing scenarios.
+const DEFAULT_ESTIMATED_MINUTES_PER_JOB = 3;
+const DEFAULT_MIN_ESTIMATED_MINUTES = 1; // Minimum wait time to show meaningful estimate
+const POLLING_INTERVAL_MS = 2000; // Poll for progress updates every 2 seconds
+const COMPLETION_DISPLAY_DURATION_MS = 3000; // Show completion message for 3 seconds
+
 /**
  * Progress Tracker Class
  * Manages real-time progress updates and stage tracking
@@ -14,6 +23,8 @@ export class ProgressTracker {
       updateInterval: 100,
       pollInterval: 2000, // Poll every 2 seconds
       smoothingFactor: 0.1,
+      estimatedMinutesPerJob: DEFAULT_ESTIMATED_MINUTES_PER_JOB, // Estimated processing time per job in queue
+      minEstimatedMinutes: DEFAULT_MIN_ESTIMATED_MINUTES, // Minimum estimated wait time to display
       onProgressUpdate: () => {},
       onCompletion: () => {},
       onError: () => {},
@@ -29,12 +40,8 @@ export class ProgressTracker {
     this.stages = []; // Initialize empty stages array
     this.cancelling = false; // Flag to prevent multiple cancellation attempts
     
-    // Get DOM elements
-    this.progressBar = document.getElementById('progressBar');
-    this.progressText = document.getElementById('progressText');
+    // DOM element references
     this.progressMessage = document.getElementById('progressMessage');
-    this.timeRemaining = document.getElementById('timeRemaining');
-    this.estimatedCompletion = document.getElementById('estimatedCompletion');
     this.stageContainer = document.getElementById('stageProgressContainer');
     
     // Initialize UI - simplified initialization since DOM elements are already set
@@ -52,16 +59,18 @@ export class ProgressTracker {
    * Setup DOM elements
    */
   setupElements() {
-    this.overallProgressBar = document.getElementById('overallProgress');
-    this.overallPercentage = document.getElementById('overallPercentage');
-    this.processingStatus = document.getElementById('processingStatus');
-    this.timeRemaining = document.getElementById('timeRemaining');
+    // Queue tracking elements (for when job is queued)
+    this.queueTracker = document.getElementById('queueTracker');
+    this.queuePosition = document.getElementById('queuePosition');
+    this.queueStatus = document.getElementById('queueStatus');
+    this.estimatedWait = document.getElementById('estimatedWait');
+    
+    // Stage progress elements (for when job is processing)
     this.stageContainer = document.getElementById('stageProgressContainer');
     this.cancelButton = document.getElementById('cancelProcessing');
 
-    if (!this.overallProgressBar) {
-      throw new Error('Progress bar elements not found');
-    }
+    // Note: Queue tracker is used for queued jobs, stage progress for processing jobs
+    // The queue tracker will be shown when job is queued, hidden when processing starts
 
     // Cancel button handler (prevent duplicate listeners)
     if (this.cancelButton && !this.cancelButton.hasAttribute('data-progress-tracker-listener')) {
@@ -116,6 +125,10 @@ export class ProgressTracker {
     this.progressData.lastUpdate = Date.now();
 
     this.log('info', `Starting progress tracking for job ${jobId}`);
+    
+    // Show the queue tracker and cancel button
+    this.showQueueTracker();
+    this.showCancelButton();
     
     // Try WebSocket connection first
     this.connectWebSocket();
@@ -394,51 +407,98 @@ export class ProgressTracker {
    * Update UI elements
    */
   updateUI() {
-    this.updateOverallProgress();
-    this.updateStageProgress();
+    this.updateQueueStatus();
     this.updateStatusText();
-    this.updateTimeEstimate();
   }
 
   /**
-   * Update overall progress bar
+   * Update queue status or hide queue tracker when processing starts
    */
-  updateOverallProgress() {
-    // Use 'progress' from backend data, fallback to calculated progress from stages
-    const overallProgress = this.progressData.progress || this.calculateOverallProgressFromStages() || 0;
-    
-    if (this.progressBar) {
-      this.progressBar.style.width = `${overallProgress}%`;
+  updateQueueStatus() {
+    // If job is queued, show queue tracker
+    if (this.progressData.status === 'queued') {
+      this.showQueueTracker();
+      
+      if (this.queuePosition) {
+        const queuePos = this.progressData.queue_position;
+        if (this._validateQueuePosition(queuePos)) {
+          this.queuePosition.textContent = `Position #${queuePos}`;
+        } else {
+          this.queuePosition.textContent = `Position: calculating...`;
+        }
+      }
+      
+      if (this.queueStatus) {
+        const position = this.progressData.queue_position;
+        if (this._validateQueuePosition(position)) {
+          if (position === 1) {
+            this.queueStatus.textContent = "Next in queue - processing will start soon...";
+          } else {
+            this.queueStatus.textContent = `Waiting in queue... ${position - 1} jobs ahead`;
+          }
+        } else {
+          this.queueStatus.textContent = "Waiting in queue... position calculating...";
+        }
+      }
+      
+      if (this.estimatedWait) {
+        // Validate queue_position is a valid number before calculation
+        const queuePosition = this.progressData.queue_position;
+        if (this._validateQueuePosition(queuePosition)) {
+          // Configurable estimate based on jobs ahead in queue
+          const estimatedMinutes = Math.max(
+            this.options.minEstimatedMinutes, 
+            (queuePosition - 1) * this.options.estimatedMinutesPerJob
+          );
+          this.estimatedWait.textContent = `Estimated wait: ~${this._formatWaitTime(estimatedMinutes)}`;
+        } else {
+          // Fallback when queue position is invalid
+          this.estimatedWait.textContent = `Estimated wait: calculating...`;
+        }
+      }
+    } 
+    // If job is processing or completed, hide queue tracker
+    else if (this.progressData.status === 'processing' || this.progressData.status === 'completed') {
+      this.hideQueueTracker();
     }
-
-    if (this.progressText) {
-      this.progressText.textContent = `${Math.round(overallProgress)}%`;
+  }
+  
+  /**
+   * Show the queue tracker widget
+   */
+  showQueueTracker() {
+    if (this.queueTracker) {
+      this.queueTracker.classList.remove('hidden');
+    }
+  }
+  
+  /**
+   * Hide the queue tracker widget
+   */
+  hideQueueTracker() {
+    if (this.queueTracker) {
+      this.queueTracker.classList.add('hidden');
     }
   }
 
   /**
-   * Calculate overall progress from stage information (fallback method)
+   * Show the cancel button
    */
-  calculateOverallProgressFromStages() {
-    if (!this.progressData.message) return 0;
-    
-    const stageInfo = this.parseStageMessage(this.progressData.message);
-    if (!stageInfo) return 0;
-    
-    const { stageIdx, numStages, stageProgress } = stageInfo;
-    // Calculate overall progress: (completed stages + current stage progress) / total stages
-    const completedStages = Math.max(0, stageIdx - 1);
-    const overallProgress = (completedStages * 100 + stageProgress) / numStages;
-    return Math.min(100, Math.max(0, overallProgress));
+  showCancelButton() {
+    if (this.cancelButton) {
+      this.cancelButton.classList.remove('hidden');
+      this.cancelButton.style.display = '';
+    }
   }
 
   /**
-   * Update stage progress indicators (legacy method - now handled by dynamic system)
+   * Hide the cancel button
    */
-  updateStageProgress() {
-    // This method is now handled by updateDynamicStageProgress
-    // Keep for compatibility but no longer needed
-    return;
+  hideCancelButton() {
+    if (this.cancelButton) {
+      this.cancelButton.classList.add('hidden');
+      this.cancelButton.style.display = 'none';
+    }
   }
 
   /**
@@ -451,19 +511,35 @@ export class ProgressTracker {
       this.progressMessage.textContent = statusText;
     }
   }
-
+  
   /**
-   * Update time estimate
+   * Format wait time in minutes to a readable string
+   * @param {number} minutes - Time in minutes
+   * @returns {string} Formatted time string
    */
-  updateTimeEstimate() {
-    if (this.timeRemaining) {
-      if (this.progressData.estimatedTimeRemaining) {
-        const remaining = this.progressData.estimatedTimeRemaining;
-        this.timeRemaining.textContent = `Estimated time remaining: ${this.formatTime(remaining)}`;
+  _formatWaitTime(minutes) {
+    if (minutes < 1) {
+      return "< 1 min";
+    } else if (minutes < 60) {
+      return `${Math.round(minutes)} min`;
+    } else {
+      const hours = Math.floor(minutes / 60);
+      const remainingMinutes = Math.round(minutes % 60);
+      if (remainingMinutes === 0) {
+        return `${hours}h`;
       } else {
-        this.timeRemaining.textContent = 'Calculating time estimate...';
+        return `${hours}h ${remainingMinutes}m`;
       }
     }
+  }
+
+  /**
+   * Validate that queue position is a valid positive number
+   * @param {*} queuePos - Queue position value to validate
+   * @returns {boolean} True if valid, false otherwise
+   */
+  _validateQueuePosition(queuePos) {
+    return typeof queuePos === 'number' && !isNaN(queuePos) && queuePos > 0;
   }
 
   /**
@@ -499,6 +575,9 @@ export class ProgressTracker {
     this.completed = true;
     this.stopTracking();
     
+    // Hide cancel button when processing is complete
+    this.hideCancelButton();
+    
     // Update to 100% completion
     this.progressData.overall = 100;
     this.progressData.stage = 'completed';
@@ -521,6 +600,9 @@ export class ProgressTracker {
 
     this.log('error', `Processing failed: ${data.error || 'Unknown error'}`);
     this.stopTracking();
+    
+    // Hide cancel button when processing fails
+    this.hideCancelButton();
     
     // Update UI to show error state
     this.progressData.stage = 'error';
@@ -560,6 +642,9 @@ export class ProgressTracker {
       await this.apiClient.cancelJob(jobIdToCancel);
       
       this.log('info', 'Processing cancelled successfully');
+      
+      // Hide cancel button since processing is cancelled
+      this.hideCancelButton();
       
       // Reset UI state
       this.reset();

@@ -421,7 +421,7 @@ export class ProgressTracker {
       
       if (this.queuePosition) {
         const queuePos = this.progressData.queue_position;
-        if (typeof queuePos === 'number' && !isNaN(queuePos) && queuePos > 0) {
+        if (this._validateQueuePosition(queuePos)) {
           this.queuePosition.textContent = `Position #${queuePos}`;
         } else {
           this.queuePosition.textContent = `Position: calculating...`;
@@ -430,7 +430,7 @@ export class ProgressTracker {
       
       if (this.queueStatus) {
         const position = this.progressData.queue_position;
-        if (typeof position === 'number' && !isNaN(position) && position > 0) {
+        if (this._validateQueuePosition(position)) {
           if (position === 1) {
             this.queueStatus.textContent = "Next in queue - processing will start soon...";
           } else {
@@ -444,7 +444,7 @@ export class ProgressTracker {
       if (this.estimatedWait) {
         // Validate queue_position is a valid number before calculation
         const queuePosition = this.progressData.queue_position;
-        if (typeof queuePosition === 'number' && !isNaN(queuePosition) && queuePosition > 0) {
+        if (this._validateQueuePosition(queuePosition)) {
           // Configurable estimate based on jobs ahead in queue
           const estimatedMinutes = Math.max(
             this.options.minEstimatedMinutes, 
@@ -531,6 +531,15 @@ export class ProgressTracker {
         return `${hours}h ${remainingMinutes}m`;
       }
     }
+  }
+
+  /**
+   * Validate that queue position is a valid positive number
+   * @param {*} queuePos - Queue position value to validate
+   * @returns {boolean} True if valid, false otherwise
+   */
+  _validateQueuePosition(queuePos) {
+    return typeof queuePos === 'number' && !isNaN(queuePos) && queuePos > 0;
   }
 
   /**

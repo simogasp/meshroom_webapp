@@ -175,6 +175,7 @@ class SecurityTester:
             # 0 = No issues found
             # 1 = Issues found
             # Other = Error
+            logger.info(f"Bandit exit code: {result.returncode}")
 
             # Check if bandit created the report file
             if not bandit_report.exists():

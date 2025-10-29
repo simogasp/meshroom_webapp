@@ -175,12 +175,15 @@ class SecurityTester:
             # 0 = No issues found
             # 1 = Issues found
             # Other = Error
-            
+            logger.info(f"Bandit exit code: {result.returncode}")
+
             # Check if bandit created the report file
             if not bandit_report.exists():
                 # Bandit may not create output file when there are no issues
                 # Create an empty report structure
-                logger.info("Bandit did not create output file (likely no issues found)")
+                logger.info(
+                    "Bandit did not create output file (likely no issues found)"
+                )
                 empty_report = {
                     "errors": [],
                     "generated_at": "2025-08-13T19:00:00Z",
@@ -196,10 +199,10 @@ class SecurityTester:
                             "SEVERITY.UNDEFINED": 0,
                             "loc": 0,
                             "nosec": 0,
-                            "skipped_tests": 0
+                            "skipped_tests": 0,
                         }
                     },
-                    "results": []
+                    "results": [],
                 }
                 with open(bandit_report, "w") as f:
                     json.dump(empty_report, f, indent=2)

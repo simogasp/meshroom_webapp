@@ -16,7 +16,7 @@ mypy==1.18.2
 types-requests==2.32.4.20260107
 
 # Security scanning
-bandit[toml]==1.7.5
+bandit[toml]==1.9.4
 safety==2.3.4
 
 # Documentation

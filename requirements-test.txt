@@ -13,7 +13,8 @@ isort==5.12.0
 
 # Type checking
 mypy==1.19.1
-types-requests==2.31.0.10
+types-requests==2.32.4.20260107
+
 
 # Security scanning
 bandit[toml]==1.7.5

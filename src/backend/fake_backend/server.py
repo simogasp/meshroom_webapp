@@ -517,7 +517,6 @@ async def get_parameters() -> Dict[str, Any]:
         Parameters configuration loaded at startup.
     """
     # Lazy-load if not loaded yet
-    global _parameters_config
     if not _parameters_config:
         try:
             _load_parameters_config()

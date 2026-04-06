@@ -13,7 +13,7 @@ isort==8.0.1
 
 # Type checking
 mypy==1.19.1
-types-requests==2.33.0.20260327
+types-requests==2.33.0.20260402
 
 
 # Security scanning

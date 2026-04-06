@@ -3,5 +3,5 @@ uvicorn[standard]==0.42.0
 pydantic==2.12.5
 websockets==16.0
 python-multipart==0.0.22
-requests==2.33.0
+requests==2.33.1
 websocket-client==1.9.0

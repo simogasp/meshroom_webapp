@@ -2,7 +2,7 @@
 # These dependencies are only needed for running tests, linting, and security checks
 
 # Testing framework
-pytest==9.0.2
+pytest==9.0.3
 pytest-cov==7.1.0
 pytest-asyncio==1.3.0
 

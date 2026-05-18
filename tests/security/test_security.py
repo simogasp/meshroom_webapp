@@ -101,6 +101,14 @@ class SecurityTester:
             else:
                 try:
                     vulnerabilities = json.loads(result.stdout) if result.stdout else []
+
+                    # Check if any vulnerabilities were actually found
+                    if len(vulnerabilities) == 0:
+                        logger.info(
+                            "No known security vulnerabilities found in dependencies"
+                        )
+                        return True, None
+
                     logger.warning(
                         f"Found {len(vulnerabilities)} security vulnerabilities"
                     )
@@ -114,7 +122,7 @@ class SecurityTester:
                             f"Vulnerability in {package} {version}: {vulnerability_id}"
                         )
 
-                    return False, vulnerabilities
+                    return False, {"vulnerabilities": vulnerabilities}
                 except json.JSONDecodeError:
                     logger.error("Failed to parse safety output as JSON")
                     logger.error(f"Safety stderr: {result.stderr}")
@@ -308,7 +316,7 @@ class SecurityTester:
             "safety_check": {
                 "status": "PASS" if safety_success else "FAIL",
                 "vulnerabilities_found": (
-                    len(safety_data)
+                    len(safety_data.get("vulnerabilities", []))
                     if safety_data and not safety_data.get("network_error")
                     else 0
                 ),

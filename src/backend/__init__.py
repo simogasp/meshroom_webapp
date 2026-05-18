@@ -5,4 +5,9 @@ This package contains various backend implementations for photogrammetry
 processing, including fake backends for testing and real Meshroom integration.
 """
 
-__version__ = "0.1.0"
+try:
+    from importlib.metadata import version
+
+    __version__ = version("meshroom-webapp")
+except Exception:
+    __version__ = "unknown"

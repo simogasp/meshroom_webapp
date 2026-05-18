@@ -5,4 +5,9 @@ This package contains various frontend implementations for the photogrammetry
 application, including CLI clients and future web interfaces.
 """
 
-__version__ = "0.1.0"
+try:
+    from importlib.metadata import version
+
+    __version__ = version("meshroom-webapp")
+except Exception:
+    __version__ = "unknown"

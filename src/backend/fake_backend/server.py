@@ -68,6 +68,7 @@ def sanitize_filename(filename: str) -> str:
 
     Raises:
         ValueError: If the filename is invalid or potentially malicious
+
     """
     if not filename:
         raise ValueError("Filename cannot be empty")
@@ -110,6 +111,7 @@ def validate_job_id(job_id: str) -> str:
 
     Raises:
         ValueError: If the job ID is invalid or potentially malicious
+
     """
     if not job_id:
         raise ValueError("Job ID cannot be empty")
@@ -144,6 +146,7 @@ def safe_join(
 
     Raises:
         ValueError: If the resulting path would escape the base directory
+
     """
     if sanitize_func:
         filename = sanitize_func(filename)
@@ -214,6 +217,7 @@ def _load_parameters_config() -> dict[str, Any]:
     Raises:
         FileNotFoundError: If the parameters file is missing.
         ValueError: If the parameters file is invalid.
+
     """
     global _parameters_config
     params_path = os.path.join(
@@ -252,6 +256,7 @@ def create_job_directories(job_id: str) -> dict[str, str]:
 
     Raises:
         OSError: If directory creation fails
+
     """
     job_dir = os.path.join(base_output_dir, job_id)
     uploads_dir = os.path.join(job_dir, "uploads")
@@ -280,6 +285,7 @@ def save_job_parameters(job_id: str, parameters: dict[str, Any]) -> str:
 
     Raises:
         OSError: If file writing fails
+
     """
     job_dir = os.path.join(base_output_dir, job_id)
     parameters_path = os.path.join(job_dir, "parameters.json")
@@ -325,6 +331,7 @@ def _parse_upload_parameters(parameters: str | None) -> dict[str, Any]:
 
     Raises:
         HTTPException: If parameters are invalid
+
     """
     if parameters:
         try:
@@ -348,6 +355,7 @@ def _validate_safe_path(uploads_dir: str, nested_dir: str, relative_path: str) -
 
     Raises:
         HTTPException: If path traversal is detected or paths are invalid
+
     """
     abs_uploads_dir = os.path.normcase(os.path.realpath(uploads_dir))
     abs_nested_dir = os.path.normcase(os.path.realpath(nested_dir))
@@ -380,6 +388,7 @@ async def _process_uploaded_files(
 
     Raises:
         HTTPException: If file processing fails
+
     """
     images = []
     total_size = 0
@@ -484,6 +493,7 @@ async def root() -> dict[str, Any]:
 
     Returns:
         Basic server status and information
+
     """
     return {
         "service": "Fake Photogrammetry Backend",
@@ -502,6 +512,7 @@ async def health_check() -> dict[str, str]:
 
     Returns:
         Service health status
+
     """
     return {"status": "healthy", "timestamp": datetime.now().isoformat()}
 
@@ -512,6 +523,7 @@ async def get_parameters() -> dict[str, Any]:
 
     Returns:
         Parameters configuration loaded at startup.
+
     """
     # Lazy-load if not loaded yet
     if not _parameters_config:
@@ -542,6 +554,7 @@ async def upload_images(
 
     Raises:
         HTTPException: If validation fails or no files are provided
+
     """
     try:
         # Parse dynamic parameters if present; if missing, use defaults from config
@@ -612,6 +625,7 @@ async def get_queue_status() -> dict[str, Any]:
 
     Returns:
         Queue status information including current processing job and queued jobs
+
     """
     return job_manager.get_queue_status()
 
@@ -628,6 +642,7 @@ async def get_job_status(job_id: str) -> dict[str, Any]:
 
     Raises:
         HTTPException: If the job is not found
+
     """
     job = job_manager.get_job(job_id)
     if not job:
@@ -657,6 +672,7 @@ def _generate_model_data(job_id: str) -> tuple[bytes, str]:
 
     Returns:
         Tuple of (model_data, model_type)
+
     """
     if USE_REAL_MODEL:
         return generate_real_model(job_id), "real"
@@ -673,6 +689,7 @@ def _save_model_file(job_id: str, model_data: bytes) -> tuple[str, str]:
 
     Returns:
         Tuple of (model_path, secure_filename)
+
     """
     job_dirs = create_job_directories(job_id)
     models_dir = job_dirs["models_dir"]
@@ -698,6 +715,7 @@ async def download_model(job_id: str) -> FileResponse:
 
     Raises:
         HTTPException: If the job was not found or not completed
+
     """
     # Validate job_id immediately
     try:
@@ -760,6 +778,7 @@ async def cancel_job(job_id: str) -> dict[str, str]:
 
     Raises:
         HTTPException: If the job was not found
+
     """
     success = await job_manager.cancel_job(job_id)
     if not success:
@@ -776,6 +795,7 @@ async def list_jobs() -> list[dict[str, Any]]:
 
     Returns:
         List of all jobs with basic information
+
     """
     jobs = job_manager.get_all_jobs()
     return [
@@ -798,6 +818,7 @@ async def websocket_endpoint(websocket: WebSocket, job_id: str) -> None:
     Args:
         websocket: The WebSocket connection
         job_id: The job identifier to subscribe to
+
     """
     await websocket.accept()
     connection_id = None

@@ -27,6 +27,7 @@ def setup_logging(verbose_level: str):
 
     Args:
         verbose_level: Logging level (DEBUG, INFO, WARNING, ERROR)
+
     """
     level_map = {
         "DEBUG": logging.DEBUG,
@@ -56,6 +57,7 @@ class TestRunner:
 
         Args:
             project_root: Path to project root directory
+
         """
         if project_root is None:
             project_root = Path(__file__).parent.parent
@@ -77,6 +79,7 @@ class TestRunner:
 
         Returns:
             Tuple of (success, output)
+
         """
         logger.debug(f"Running command: {' '.join(cmd)}")
         logger.info(f"Running {description}...")
@@ -123,6 +126,7 @@ class TestRunner:
 
         Returns:
             True if dependencies are available, False otherwise
+
         """
         logger.info("Checking test dependencies...")
 
@@ -165,6 +169,7 @@ class TestRunner:
 
         Returns:
             True if all integration tests pass
+
         """
         test_type = "QUICK INTEGRATION" if quick else "FULL INTEGRATION"
         logger.info("=" * 60)
@@ -234,6 +239,7 @@ class TestRunner:
 
         Returns:
             True if quality tests pass
+
         """
         logger.info("=" * 60)
         logger.info("RUNNING CODE QUALITY TESTS")
@@ -251,6 +257,7 @@ class TestRunner:
 
         Returns:
             True if security tests pass
+
         """
         logger.info("=" * 60)
         logger.info("RUNNING SECURITY TESTS")
@@ -270,6 +277,7 @@ class TestRunner:
 
         Returns:
             True if all tests pass, False otherwise
+
         """
         logger.info("=" * 60)
         logger.info("MESHROOM WEBAPP COMPLETE TEST SUITE")

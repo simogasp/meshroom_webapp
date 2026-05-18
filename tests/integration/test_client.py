@@ -37,6 +37,7 @@ class ClientIntegrationTester:
         Args:
             backend_url: Base URL of the backend server
             timeout: Request timeout in seconds
+
         """
         self.backend_url = backend_url.rstrip("/")
         self.timeout = timeout
@@ -54,6 +55,7 @@ class ClientIntegrationTester:
 
         Returns:
             Dummy image data as bytes
+
         """
         # Create minimal JPEG-like header
         jpeg_header = b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00H\x00H\x00\x00"
@@ -76,6 +78,7 @@ class ClientIntegrationTester:
 
         Returns:
             Job ID if successful, None otherwise
+
         """
         try:
             logger.info(f"Testing image upload with {num_images} images...")
@@ -126,6 +129,7 @@ class ClientIntegrationTester:
 
         Returns:
             True if status polling works, False otherwise
+
         """
         try:
             logger.info("Testing job status polling...")
@@ -166,6 +170,7 @@ class ClientIntegrationTester:
 
         Returns:
             True if WebSocket test passes, False otherwise
+
         """
         try:
             logger.info("Testing WebSocket connection...")
@@ -248,6 +253,7 @@ class ClientIntegrationTester:
 
         Returns:
             True if download test passes, False otherwise
+
         """
         try:
             logger.info("Testing model download (waiting for job completion)...")
@@ -298,6 +304,7 @@ class ClientIntegrationTester:
 
         Returns:
             True if all quick tests pass, False otherwise
+
         """
         logger.info("=" * 60)
         logger.info("RUNNING QUICK CLIENT INTEGRATION TESTS")
@@ -324,6 +331,7 @@ class ClientIntegrationTester:
 
         Returns:
             True if all tests pass, False otherwise
+
         """
         logger.info("=" * 60)
         logger.info("RUNNING FULL CLIENT INTEGRATION TESTS")

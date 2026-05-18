@@ -37,6 +37,7 @@ class PhotogrammetryClient:
 
         Args:
             base_url: Base URL of the backend server
+
         """
         self.base_url = base_url.rstrip("/")
         self.session = requests.Session()
@@ -52,6 +53,7 @@ class PhotogrammetryClient:
 
         Returns:
             Dummy image data as bytes
+
         """
         # Create the dummy JPEG-like header
         jpeg_header = b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00H\x00H\x00\x00"
@@ -77,6 +79,7 @@ class PhotogrammetryClient:
 
         Returns:
             List of image data dictionaries
+
         """
         images = []
         for i in range(count):
@@ -105,6 +108,7 @@ class PhotogrammetryClient:
 
         Returns:
             Job ID if successful, None otherwise
+
         """
         try:
             # Prepare files for upload
@@ -147,6 +151,7 @@ class PhotogrammetryClient:
 
         Returns:
             Job status data or None if failed
+
         """
         try:
             response = self.session.get(f"{self.base_url}/jobs/{job_id}")
@@ -168,6 +173,7 @@ class PhotogrammetryClient:
 
         Returns:
             Absolute path to output directory
+
         """
         if output_dir is not None:
             return output_dir
@@ -193,6 +199,7 @@ class PhotogrammetryClient:
 
         Raises:
             Exception: On network or file errors
+
         """
         response = self.session.get(f"{self.base_url}/jobs/{job_id}/download")
 
@@ -222,6 +229,7 @@ class PhotogrammetryClient:
 
         Returns:
             Path to downloaded file or None if failed
+
         """
         try:
             output_dir = self._get_output_directory(output_dir)
@@ -274,6 +282,7 @@ class PhotogrammetryClient:
 
         Returns:
             True if the job completed successfully, False otherwise
+
         """
         ws_url = f"{self.websocket_url}/ws/{job_id}"
         logger.info(f"Connecting to WebSocket: {ws_url}")
@@ -364,6 +373,7 @@ class PhotogrammetryClient:
 
         Returns:
             True if workflow completed successfully, False otherwise
+
         """
         logger.info("=" * 60)
         logger.info("STARTING PHOTOGRAMMETRY TEST WORKFLOW")

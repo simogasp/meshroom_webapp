@@ -40,6 +40,7 @@ class BackendManager:
         Args:
             backend_dir: Path to backend directory
             port: Port number for the backend
+
         """
         if backend_dir is None:
             # Default to project structure
@@ -56,6 +57,7 @@ class BackendManager:
 
         Returns:
             True if the backend is responding, False otherwise
+
         """
         try:
             response = requests.get(f"{self.base_url}/health", timeout=2)
@@ -68,6 +70,7 @@ class BackendManager:
 
         Returns:
             PID if found, None otherwise
+
         """
         try:
             if self.pid_file.exists():
@@ -91,6 +94,7 @@ class BackendManager:
 
         Returns:
             True if started successfully, False otherwise
+
         """
         if self.is_running():
             logger.info(f"Backend already running at {self.base_url}")
@@ -141,6 +145,7 @@ class BackendManager:
 
         Returns:
             True if stopped successfully, False otherwise
+
         """
         pid = self.get_pid()
 
@@ -226,6 +231,7 @@ class BackendManager:
 
         Returns:
             True if the backend becomes ready, False if timeout
+
         """
         logger.info(f"Waiting for backend at {self.base_url} (max {timeout}s)...")
 
@@ -243,6 +249,7 @@ class BackendManager:
 
         Returns:
             Status dictionary
+
         """
         running = self.is_running()
         pid = self.get_pid()

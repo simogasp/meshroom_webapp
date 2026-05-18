@@ -40,6 +40,7 @@ class QualityTester:
             project_root: Path to the project root directory
             output_dir: Directory to save quality reports
             fix_issues: Whether to automatically fix issues when possible
+
         """
         self.project_root = project_root
         self.output_dir = output_dir or (project_root / "reports" / "quality")
@@ -51,6 +52,7 @@ class QualityTester:
 
         Returns:
             Tuple of (success, output)
+
         """
         action = "Fixing" if self.fix_issues else "Checking"
         logger.info(f"{action} code with ruff linter...")
@@ -110,6 +112,7 @@ class QualityTester:
 
         Returns:
             Tuple of (success, output)
+
         """
         action = "Formatting" if self.fix_issues else "Checking format of"
         logger.info(f"{action} code with ruff formatter...")
@@ -168,6 +171,7 @@ class QualityTester:
 
         Returns:
             Tuple of (success, output)
+
         """
         logger.info("Running mypy type checking...")
 
@@ -214,6 +218,7 @@ class QualityTester:
 
         Returns:
             True if all quality tests pass
+
         """
         logger.info("=" * 60)
         logger.info("RUNNING CODE QUALITY TESTS")

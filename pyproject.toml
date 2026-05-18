@@ -91,6 +91,12 @@ ignore = [
     "UP035",  # typing.Dict -> dict (Python 3.9+, will migrate separately)
     "B008",  # Function call in argument defaults (FastAPI pattern)
     "B904",  # Exception chaining with `from` (will improve separately)
+    "D203",  # 1 blank line required before class docstring (conflicts with D211/Google style)
+    "D213",  # Multi-line docstring summary should start at second line (conflicts with D212/Google style)
+    "D406",  # Section name should end with a newline (NumPy style, not Google)
+    "D407",  # Missing dashed underline after section (NumPy style, not Google)
+    "D408",  # Section underline should be in line with section name (NumPy style, not Google)
+    "D409",  # Section underline should match length of section name (NumPy style, not Google)
 ]
 
 # Per-file ignores (matching previous flake8 config)

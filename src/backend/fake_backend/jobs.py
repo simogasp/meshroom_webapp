@@ -38,6 +38,7 @@ def generate_dummy_model(job_id: str) -> bytes:
 
     Returns:
         Dummy GLB file content as bytes
+
     """
     # Create a simple dummy GLB file header
     # This is not a real GLB file, just dummy data for testing
@@ -65,6 +66,7 @@ def generate_real_model(job_id: str) -> bytes:
     Raises:
         FileNotFoundError: If the monstree.glb file is not found
         IOError: If there's an error reading the file
+
     """
     # Get the project root path (4 levels up from this file)
     current_file = os.path.abspath(__file__)
@@ -142,6 +144,7 @@ class JobManager:
 
         Returns:
             The job ID
+
         """
         # Add job to storage
         self._jobs[job.job_id] = job
@@ -174,6 +177,7 @@ class JobManager:
 
         Returns:
             The processing job or None if not found
+
         """
         job = self._jobs.get(job_id)
         if job and job.status == JobStatus.QUEUED:
@@ -186,6 +190,7 @@ class JobManager:
 
         Returns:
             List of all processing jobs
+
         """
         jobs = list(self._jobs.values())
         # Update queue positions for queued jobs
@@ -202,6 +207,7 @@ class JobManager:
 
         Returns:
             Queue position (1-based) or None if not in queue
+
         """
         try:
             return self._job_queue.index(job_id) + 1
@@ -213,6 +219,7 @@ class JobManager:
 
         Returns:
             Dictionary with queue statistics
+
         """
         return {
             "queue_length": self.queue_length,
@@ -241,6 +248,7 @@ class JobManager:
 
         Returns:
             Connection ID
+
         """
         connection = WebSocketConnection(job_id=job_id)
         connection_id = connection.connection_id
@@ -259,6 +267,7 @@ class JobManager:
 
         Args:
             connection_id: The connection identifier
+
         """
         if connection_id in self._connections:
             del self._connections[connection_id]
@@ -276,6 +285,7 @@ class JobManager:
 
         Args:
             job_id: The job identifier
+
         """
         logger.warning(
             f"start_processing called for job {job_id} - jobs are now automatically queued"
@@ -354,6 +364,7 @@ class JobManager:
 
         Args:
             job_id: The job identifier
+
         """
         job = self.get_job(job_id)
         if not job:
@@ -436,6 +447,7 @@ class JobManager:
             job_id: The job identifier
             progress: Progress percentage (0-100)
             message: Progress message
+
         """
         if job_id not in self._job_subscriptions:
             return
@@ -471,6 +483,7 @@ class JobManager:
 
         Returns:
             True if the job was canceled, False if not found or already completed
+
         """
         job = self.get_job(job_id)
         if not job or job.status in [JobStatus.COMPLETED, JobStatus.FAILED]:

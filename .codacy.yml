@@ -2,6 +2,15 @@
 # Codacy configuration file
 # https://docs.codacy.com/repositories-configure/codacy-configuration-file/
 
+engines:
+  # Configure pydocstyle to use Google docstring convention
+  pydocstyle:
+    enabled: true
+    python_version: 3
+    # Use Google-style docstrings (not NumPy or PEP 257)
+    # This disables D213 and enables D212
+    configuration_file: pyproject.toml
+
 exclude_paths:
   # Lock files and generated files should not be analyzed as code
   - "uv.lock"

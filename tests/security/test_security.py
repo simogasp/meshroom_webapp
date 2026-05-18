@@ -34,6 +34,7 @@ class SecurityTester:
         Args:
             project_root: Path to the project root directory
             output_dir: Directory to save security reports
+
         """
         self.project_root = project_root
         self.output_dir = output_dir or (project_root / "reports" / "security")
@@ -96,6 +97,7 @@ class SecurityTester:
 
         Returns:
             Tuple of (success, vulnerabilities_data)
+
         """
         logger.info("Running safety check for dependency vulnerabilities...")
 
@@ -200,6 +202,7 @@ class SecurityTester:
 
         Returns:
             Tuple of (success, scan_results)
+
         """
         logger.info("Running bandit security scan...")
 
@@ -286,6 +289,7 @@ class SecurityTester:
 
         Returns:
             True if overall security status is acceptable
+
         """
         logger.info("Generating security summary report...")
 
@@ -348,6 +352,7 @@ class SecurityTester:
 
         Returns:
             True if all security tests pass
+
         """
         logger.info("=" * 60)
         logger.info("RUNNING SECURITY TESTS")

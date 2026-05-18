@@ -33,6 +33,7 @@ class BackendTester:
         Args:
             backend_url: Base URL of the backend server
             timeout: Request timeout in seconds
+
         """
         self.backend_url = backend_url.rstrip("/")
         self.timeout = timeout
@@ -43,6 +44,7 @@ class BackendTester:
 
         Returns:
             True if health check passes, False otherwise
+
         """
         try:
             response = self.session.get(
@@ -68,6 +70,7 @@ class BackendTester:
 
         Returns:
             True if root endpoint works, False otherwise
+
         """
         try:
             response = self.session.get(f"{self.backend_url}/", timeout=self.timeout)
@@ -91,6 +94,7 @@ class BackendTester:
 
         Returns:
             True if jobs endpoint works, False otherwise
+
         """
         try:
             response = self.session.get(
@@ -118,6 +122,7 @@ class BackendTester:
 
         Returns:
             True if returns proper 404, False otherwise
+
         """
         try:
             fake_job_id = "nonexistent-job-id"
@@ -145,6 +150,7 @@ class BackendTester:
 
         Returns:
             True if backend becomes available, False if timeout
+
         """
         logger.info(f"Waiting for backend at {self.backend_url} (max {max_wait}s)...")
 
@@ -168,6 +174,7 @@ class BackendTester:
 
         Returns:
             True if all tests pass, False otherwise
+
         """
         logger.info("=" * 60)
         logger.info("RUNNING BACKEND INTEGRATION TESTS")

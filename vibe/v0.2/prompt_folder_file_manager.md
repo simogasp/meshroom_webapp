@@ -39,14 +39,14 @@ Extend the existing **image upload feature** to also support uploading entire di
 * Apply the same coding style rules already enforced in the project (black, isort, bandit, markdownlint, etc.). For that remember that there is an automatic test script that can be run:
 
       ```bash
-      python tests/run_tests.py --quality
+      uv run tests/run_tests.py --quality
       ```
 
      which also have a `--fix` option to automatically fix the issues where possible.
 * More generally, ensure that the integration tests pass when modifying the server code:
 
       ```bash
-      python tests/run_tests.py --integration
+      uv run tests/run_tests.py --integration
       ```
 
 * Check that after all changes all the front ends still work.

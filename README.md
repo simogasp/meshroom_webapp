@@ -97,8 +97,8 @@ The Web Frontend v0.2 provides a complete browser-based interface for 3D reconst
 
 ### Prerequisites
 
-- Python 3.9+
-- pip package manager
+- Python 3.12+
+- [uv](https://docs.astral.sh/uv/) package manager
 
 ### Installation
 
@@ -109,18 +109,20 @@ The Web Frontend v0.2 provides a complete browser-based interface for 3D reconst
     cd meshroom_webapp
     ```
 
-2. Create a virtual environment:
+2. Install uv (if not already installed):
 
     ```bash
-    python -m venv .venv
-    source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    # or on macOS: brew install uv
     ```
 
-3. Install dependencies:
+3. Create a virtual environment and install dependencies:
 
     ```bash
-    pip install -r requirements.txt
+    uv sync --all-extras
     ```
+
+    This will create a `.venv` directory and install all dependencies with their locked versions.
 
 ### Running the Application
 
@@ -442,13 +444,13 @@ python src/frontend/fake_frontend/client.py
 
 ```bash
 # Run all tests  
-python tests/run_tests.py
+uv run tests/run_tests.py
 
 # Run with auto-fix for formatting issues
-python tests/run_tests.py --quality --fix
+uv run tests/run_tests.py --quality --fix
 
 # Run integration tests
-python tests/run_tests.py --integration
+uv run tests/run_tests.py --integration
 ```
 
 ### Contributing
@@ -471,8 +473,7 @@ This project uses various open-source libraries, each with their own licenses:
 Run `pip-licenses` to see all dependency licenses:
 
 ```bash
-pip install pip-licenses
-pip-licenses --format=table --with-license-file --no-license-path
+uv tool run pip-licenses --format=table --with-license-file --no-license-path
 ```
 
 ## 🚀 CI/CD Pipeline
@@ -482,7 +483,7 @@ This project includes a comprehensive continuous integration and deployment pipe
 - **Automated Testing**: Integration, quality, and security tests
 - **Code Quality**: Linting (flake8), formatting (black), type checking (mypy)
 - **Security Scanning**: Dependency vulnerabilities (safety) and static analysis (bandit)
-- **Cross-Platform**: Tests on Python 3.10-3.13
+- **Cross-Platform**: Tests on Python 3.12-3.14
 
 See [.github/workflows/PIPELINE_GUIDE.md](.github/workflows/PIPELINE_GUIDE.md) for detailed documentation.
 
@@ -490,13 +491,13 @@ See [.github/workflows/PIPELINE_GUIDE.md](.github/workflows/PIPELINE_GUIDE.md) f
 
 ```bash
 # Run all tests
-python tests/run_tests.py
+uv run tests/run_tests.py
 
 # Run with auto-fix for formatting issues
-python tests/run_tests.py --quality --fix
+uv run tests/run_tests.py --quality --fix
 
 # Run quick integration tests
-python tests/run_tests.py --integration --quick
+uv run tests/run_tests.py --integration --quick
 ```
 
 ## Support

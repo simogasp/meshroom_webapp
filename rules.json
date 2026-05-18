@@ -65,7 +65,7 @@
       "criteria": "Quality control tools",
       "instructions": [
         "Ensure code passes all quality control tools used in the project, including but not limited to: bandit, mypy, isort, black for Python, and markdownlint for Markdown.",
-        "Run the project's unified quality script (python tests/run_tests.py --quality) before finalizing any code."
+        "Run the project's unified quality script (uv run tests/run_tests.py --quality) before finalizing any code."
       ]
     },
     {

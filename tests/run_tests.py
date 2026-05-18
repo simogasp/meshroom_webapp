@@ -131,11 +131,11 @@ class TestRunner:
         """
         logger.info("Checking test dependencies...")
 
-        # Check if requirements-test.txt exists
-        test_requirements = self.project_root / "requirements-test.txt"
-        if not test_requirements.exists():
+        # Check if pyproject.toml exists
+        pyproject = self.project_root / "pyproject.toml"
+        if not pyproject.exists():
             logger.error(
-                "requirements-test.txt not found. Please install test dependencies."
+                "pyproject.toml not found. Please ensure the project is set up correctly."
             )
             return False
 
@@ -156,7 +156,7 @@ class TestRunner:
         if missing_modules:
             logger.error(f"Missing test dependencies: {', '.join(missing_modules)}")
             logger.error("Please install test dependencies with:")
-            logger.error("pip install -r requirements-test.txt")
+            logger.error("uv sync --all-extras")
             return False
 
         logger.info("All test dependencies are available")

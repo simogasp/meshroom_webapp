@@ -30,7 +30,7 @@ All contributed code must pass the following automated checks without modificati
 These rules are enforced via CI. Contributors should run the quality test before committing:
 
 ```bash
-python tests/run_tests.py --quality
+uv run tests/run_tests.py --quality
 ```
 
 ## Type Hints

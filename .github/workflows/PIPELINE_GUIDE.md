@@ -27,7 +27,7 @@ The main entry point is `tests/run_tests.py`, which provides:
 
 #### Type Checking with MyPy
 
-- **Configuration**: `pyproject.toml` and `mypy.ini`
+- **Configuration**: `pyproject.toml` (includes [tool.mypy], [tool.black], [tool.isort], [tool.bandit])
 - **Features**: Strict optional checking, redundant cast warnings
 - **Target**: Python 3.9+
 
@@ -54,7 +54,7 @@ The main entry point is `tests/run_tests.py`, which provides:
 
 #### Static Security Analysis (Bandit)
 
-- **Configuration**: `.bandit`
+- **Configuration**: `[tool.bandit]` in `pyproject.toml`
 - **Features**: AST-based security issue detection
 - **Focus**: High and medium severity issues
 - **Exclusions**: Test code, low-severity demo issues
@@ -74,36 +74,36 @@ The main entry point is `tests/run_tests.py`, which provides:
 #### Run All Tests
 
 ```bash
-python tests/run_tests.py
+uv run tests/run_tests.py
 ```
 
 #### Run Specific Test Types
 
 ```bash
 # Integration tests only (quick mode)
-python tests/run_tests.py --integration --quick
+uv run tests/run_tests.py --integration --quick
 
 # Full integration tests
-python tests/run_tests.py --integration
+uv run tests/run_tests.py --integration
 
 # Code quality tests only
-python tests/run_tests.py --quality
+uv run tests/run_tests.py --quality
 
 # Security tests only
-python tests/run_tests.py --security
+uv run tests/run_tests.py --security
 ```
 
 #### Auto-fix Code Quality Issues
 
 ```bash
 # Fix formatting and import issues automatically
-python tests/run_tests.py --quality --fix
+uv run tests/run_tests.py --quality --fix
 ```
 
 #### Verbose Output
 
 ```bash
-python tests/run_tests.py --verbose DEBUG
+uv run tests/run_tests.py --verbose DEBUG
 ```
 
 ### Manual Tool Usage
@@ -128,7 +128,7 @@ flake8 src/ tests/
 mypy src/
 
 # Security scan
-bandit -r src/ -f json -c .bandit
+bandit -r src/ -f json -c pyproject.toml
 ```
 
 #### Backend Management
@@ -190,11 +190,10 @@ The pipeline runs on:
 
 - **`pyproject.toml`**: Black, isort, bandit, coverage, mypy settings
 - **`.flake8`**: Flake8 linting configuration
-- **`mypy.ini`**: Additional MyPy configuration
 
 ### Security Configuration
 
-- **`.bandit`**: Bandit security scanner settings
+- **`[tool.bandit]`**: Bandit security scanner settings in pyproject.toml
 - **Exclusions**: Test code, demo implementations
 - **Focus**: High/medium severity security issues
 
@@ -239,7 +238,7 @@ python tests/scripts/backend_manager.py start
 
 ```bash
 # Auto-fix most formatting issues
-python tests/run_tests.py --quality --fix
+uv run tests/run_tests.py --quality --fix
 
 # Check specific tool output in reports/quality/
 ```
@@ -249,8 +248,7 @@ python tests/run_tests.py --quality --fix
 #### Development Dependencies
 
 ```bash
-pip install -r requirements.txt
-pip install -r requirements-test.txt
+uv sync --all-extras
 ```
 
 #### Environment Variables

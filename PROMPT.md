@@ -48,7 +48,7 @@ When generating Python code for this project, you must follow these rules:
    - Generated code must pass all repository quality checks by running:
 
      ```bash
-     python tests/run_tests.py --quality
+     uv run tests/run_tests.py --quality
      ```
 
    - This includes:

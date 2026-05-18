@@ -1,6 +1,54 @@
+[project]
+name = "meshroom-webapp"
+version = "0.2.0"
+description = "Web application for Meshroom 3D reconstruction"
+readme = "README.md"
+requires-python = ">=3.12"
+license = {text = "MIT"}
+authors = [
+    {name = "Simone Gasparini", email = "simone.gasparini@gmail.com"}
+]
+dependencies = [
+    "fastapi==0.136.1",
+    "uvicorn[standard]==0.47.0",
+    "pydantic==2.13.4",
+    "websockets==16.0",
+    "python-multipart==0.0.29",
+    "requests==2.34.2",
+    "websocket-client==1.9.0",
+]
+
+[project.optional-dependencies]
+test = [
+    # Testing framework
+    "pytest==9.0.3",
+    "pytest-cov==7.1.0",
+    "pytest-asyncio==1.3.0",
+    # Code quality and linting
+    "flake8==7.3.0",
+    "black==26.5.0",
+    "isort==8.0.1",
+    # Type checking
+    "mypy==2.1.0",
+    "types-requests==2.33.0.20260518",
+    # Security scanning
+    "bandit[toml]==1.9.4",
+    "safety==3.7.0",
+    # Documentation
+    "sphinx==9.1.0",
+    "sphinx-rtd-theme==3.1.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
 [tool.black]
 line-length = 88
-target-version = ['py39', 'py310', 'py311', 'py312']
+target-version = ['py312', 'py313', 'py314']
 include = '\.pyi?$'
 extend-exclude = '''
 /(
@@ -43,12 +91,37 @@ skip_glob = [
 ]
 
 [tool.bandit]
-exclude_dirs = ["tests", "build", "dist", "downloads", "models", "uploads", "reports"]
-skips = ["B311"]  # Skip random number generator warnings for test/demo code
+exclude_dirs = ["tests", "build", "dist", "downloads", "models", "uploads", "reports", ".venv", "venv"]
+skips = ["B311", "B324"]  # Skip random and hashlib warnings for test/demo code
+tests = []
 
-# Only report high severity issues for CI failure
 [tool.bandit.assert_used]
-skips = ["*"]
+skips = ["*_test.py", "*/tests/*"]
+
+[tool.bandit.hardcoded_password_string]
+word_list = ["example", "sample", "demo", "test", "fake", "placeholder"]
+
+[tool.bandit.hardcoded_password_funcarg]
+word_list = ["example", "sample", "demo", "test", "fake", "placeholder"]
+
+[tool.bandit.hardcoded_password_default]
+word_list = ["example", "sample", "demo", "test", "fake", "placeholder"]
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+check_untyped_defs = true
+ignore_missing_imports = true
+strict_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+show_error_codes = true
+
+[[tool.mypy.overrides]]
+module = ["models", "jobs"]
+ignore_errors = true
 
 [tool.coverage.run]
 source = ["src"]

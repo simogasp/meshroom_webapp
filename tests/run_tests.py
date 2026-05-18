@@ -19,7 +19,6 @@ import logging
 import subprocess
 import sys
 from pathlib import Path
-from typing import List, Optional, Tuple
 
 
 def setup_logging(verbose_level: str):

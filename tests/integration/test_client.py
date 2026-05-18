@@ -15,7 +15,6 @@ import logging
 import random
 import sys
 import time
-from typing import Optional
 
 import requests
 import websocket

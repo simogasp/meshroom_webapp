@@ -102,9 +102,6 @@ ignore = [
 # Per-file ignores (matching previous flake8 config)
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["E501", "F811"]  # Allow long lines, redefinitions in tests
-"**/conftest.py" = ["F401"]  # Allow unused imports in conftest
-"**/settings.py" = ["F401"]  # Allow unused imports in settings
-"src/*/fake_*/*" = ["F401"]  # Allow unused imports in fake backends
 
 # Isort configuration (import sorting)
 [tool.ruff.lint.isort]

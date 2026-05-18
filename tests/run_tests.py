@@ -60,6 +60,9 @@ class TestRunner:
         """
         if project_root is None:
             project_root = Path(__file__).parent.parent
+        else:
+            # Validate that project_root is absolute and resolved
+            project_root = project_root.resolve()
 
         self.project_root = project_root
         self.tests_dir = project_root / "tests"
@@ -68,6 +71,12 @@ class TestRunner:
         self.client_tests = self.tests_dir / "integration" / "test_client.py"
         self.quality_tests = self.tests_dir / "quality" / "test_quality.py"
         self.security_tests = self.tests_dir / "security" / "test_security.py"
+
+        # Validate that critical test files exist
+        if not self.backend_manager.exists():
+            raise FileNotFoundError(
+                f"Backend manager not found at: {self.backend_manager}"
+            )
 
     def run_command(self, cmd: list[str], description: str) -> tuple[bool, str]:
         """Run a command and return success status and output.

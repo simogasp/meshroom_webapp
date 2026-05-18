@@ -107,7 +107,7 @@ class QualityTester:
         logger.info("Running mypy type checking...")
 
         try:
-            # MyPy will automatically use mypy.ini configuration file
+            # MyPy will automatically use [tool.mypy] configuration from pyproject.toml
             mypy_args = [
                 sys.executable,
                 "-m",

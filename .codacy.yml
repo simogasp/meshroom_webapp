@@ -1,0 +1,22 @@
+---
+# Codacy configuration file
+# https://docs.codacy.com/repositories-configure/codacy-configuration-file/
+
+exclude_paths:
+  # Lock files and generated files should not be analyzed as code
+  - "uv.lock"
+  # Python cache directories
+  - "**/__pycache__/**"
+  - "**/*.pyc"
+  # Virtual environment
+  - ".venv/**"
+  - "venv/**"
+  # Build artifacts
+  - "dist/**"
+  - "build/**"
+  - "*.egg-info/**"
+  # Reports and outputs
+  - "reports/**"
+  - "models/**"
+  - "downloads/**"
+  - "uploads/**"

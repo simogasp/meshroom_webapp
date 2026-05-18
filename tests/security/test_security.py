@@ -159,7 +159,7 @@ class SecurityTester:
         try:
             bandit_report = self.output_dir / "bandit_report.json"
 
-            # Run bandit scan
+            # Run bandit scan (reads configuration from pyproject.toml)
             result = subprocess.run(
                 [
                     sys.executable,
@@ -172,7 +172,7 @@ class SecurityTester:
                     "-o",
                     str(bandit_report),
                     "-c",
-                    str(self.project_root / ".bandit"),
+                    str(self.project_root / "pyproject.toml"),
                 ],
                 capture_output=True,
                 text=True,

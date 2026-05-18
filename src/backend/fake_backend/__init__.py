@@ -1,5 +1,4 @@
-"""
-Fake photogrammetry backend package.
+"""Fake photogrammetry backend package.
 
 This package provides a simulated backend for testing photogrammetry
 workflows before integrating with real processing engines.

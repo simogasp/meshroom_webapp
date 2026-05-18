@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Client integration tests for the Meshroom WebApp.
+"""Client integration tests for the Meshroom WebApp.
 
 This script tests the full client workflow including image upload,
 progress monitoring, and model download functionality.
@@ -33,8 +32,7 @@ class ClientIntegrationTester:
     """Integration test suite for the client workflow."""
 
     def __init__(self, backend_url: str = "http://localhost:8000", timeout: int = 10):
-        """
-        Initialize the client integration tester.
+        """Initialize the client integration tester.
 
         Args:
             backend_url: Base URL of the backend server
@@ -48,8 +46,7 @@ class ClientIntegrationTester:
         )
 
     def generate_test_image(self, filename: str, size_kb: int = 1) -> bytes:
-        """
-        Generate a small test image for upload testing.
+        """Generate a small test image for upload testing.
 
         Args:
             filename: Name of the test image
@@ -72,8 +69,7 @@ class ClientIntegrationTester:
         return jpeg_header + random_data + jpeg_end
 
     def test_image_upload(self, num_images: int = 3) -> str | None:
-        """
-        Test uploading images to the backend using dynamic parameters JSON.
+        """Test uploading images to the backend using dynamic parameters JSON.
 
         Args:
             num_images: Number of test images to upload
@@ -123,8 +119,7 @@ class ClientIntegrationTester:
             return None
 
     def test_job_status_polling(self, job_id: str) -> bool:
-        """
-        Test polling job status endpoint.
+        """Test polling job status endpoint.
 
         Args:
             job_id: Job identifier
@@ -163,8 +158,7 @@ class ClientIntegrationTester:
             return False
 
     def test_websocket_connection(self, job_id: str, quick_test: bool = True) -> bool:
-        """
-        Test WebSocket connection for progress updates.
+        """Test WebSocket connection for progress updates.
 
         Args:
             job_id: Job identifier
@@ -246,8 +240,7 @@ class ClientIntegrationTester:
             return False
 
     def test_model_download_when_ready(self, job_id: str, max_wait: int = 120) -> bool:
-        """
-        Test model download when job is completed.
+        """Test model download when job is completed.
 
         Args:
             job_id: Job identifier
@@ -301,8 +294,7 @@ class ClientIntegrationTester:
             return False
 
     def run_quick_tests(self) -> bool:
-        """
-        Run quick integration tests (upload + basic checks).
+        """Run quick integration tests (upload + basic checks).
 
         Returns:
             True if all quick tests pass, False otherwise
@@ -328,8 +320,7 @@ class ClientIntegrationTester:
         return True
 
     def run_full_tests(self) -> bool:
-        """
-        Run full integration tests (complete workflow).
+        """Run full integration tests (complete workflow).
 
         Returns:
             True if all tests pass, False otherwise

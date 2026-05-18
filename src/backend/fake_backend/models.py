@@ -1,5 +1,4 @@
-"""
-Data models and structures for the fake photogrammetry backend.
+"""Data models and structures for the fake photogrammetry backend.
 
 This module contains Pydantic models for request validation and dataclasses
 for internal data representation used in the fake backend simulation.

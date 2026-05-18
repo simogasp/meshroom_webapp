@@ -1,5 +1,4 @@
-"""
-Job manager for simulating photogrammetry processing.
+"""Job manager for simulating photogrammetry processing.
 
 This module handles job lifecycle management, progress simulation,
 and WebSocket communication for the fake backend.
@@ -32,8 +31,7 @@ logger = logging.getLogger(__name__)
 
 
 def generate_dummy_model(job_id: str) -> bytes:
-    """
-    Generate a dummy GLB model file.
+    """Generate a dummy GLB model file.
 
     Args:
         job_id: The job identifier
@@ -56,8 +54,7 @@ def generate_dummy_model(job_id: str) -> bytes:
 
 
 def generate_real_model(job_id: str) -> bytes:
-    """
-    Load a real GLB model file from the assets folder.
+    """Load a real GLB model file from the assets folder.
 
     Args:
         job_id: The job identifier (used for logging, not file selection)
@@ -95,8 +92,7 @@ def generate_real_model(job_id: str) -> bytes:
 
 
 class JobManager:
-    """
-    Manages processing jobs and WebSocket connections with FIFO queue processing.
+    """Manages processing jobs and WebSocket connections with FIFO queue processing.
 
     Simulates photogrammetry processing with random progress updates,
     manages real-time communication with clients, and processes jobs
@@ -139,8 +135,7 @@ class JobManager:
         return self._current_processing_job is not None
 
     def create_job(self, job: ProcessingJob) -> str:
-        """
-        Create a new processing job and add it to the queue.
+        """Create a new processing job and add it to the queue.
 
         Args:
             job: The processing job to create
@@ -172,8 +167,7 @@ class JobManager:
         return job.job_id
 
     def get_job(self, job_id: str) -> ProcessingJob | None:
-        """
-        Get a job by ID.
+        """Get a job by ID.
 
         Args:
             job_id: The job identifier
@@ -188,8 +182,7 @@ class JobManager:
         return job
 
     def get_all_jobs(self) -> list[ProcessingJob]:
-        """
-        Get all jobs with updated queue positions.
+        """Get all jobs with updated queue positions.
 
         Returns:
             List of all processing jobs
@@ -202,8 +195,7 @@ class JobManager:
         return jobs
 
     def _get_queue_position(self, job_id: str) -> int | None:
-        """
-        Get the current queue position for a job.
+        """Get the current queue position for a job.
 
         Args:
             job_id: The job identifier
@@ -217,8 +209,7 @@ class JobManager:
             return None
 
     def get_queue_status(self) -> dict[str, Any]:
-        """
-        Get current queue status information.
+        """Get current queue status information.
 
         Returns:
             Dictionary with queue statistics
@@ -242,8 +233,7 @@ class JobManager:
         }
 
     async def register_websocket(self, websocket: WebSocket, job_id: str) -> str:
-        """
-        Register a WebSocket connection for job updates.
+        """Register a WebSocket connection for job updates.
 
         Args:
             websocket: The WebSocket connection
@@ -265,8 +255,7 @@ class JobManager:
         return connection_id
 
     async def unregister_websocket(self, connection_id: str) -> None:
-        """
-        Unregister a WebSocket connection.
+        """Unregister a WebSocket connection.
 
         Args:
             connection_id: The connection identifier
@@ -281,8 +270,8 @@ class JobManager:
             logger.info(f"Unregistered WebSocket {connection_id}")
 
     async def start_processing(self, job_id: str) -> None:
-        """
-        Deprecated: Jobs are now automatically queued and processed.
+        """Deprecated: Jobs are now automatically queued and processed.
+
         This method is kept for backward compatibility.
 
         Args:
@@ -293,9 +282,7 @@ class JobManager:
         )
 
     async def _process_queue(self) -> None:
-        """
-        Process jobs from the queue one at a time in FIFO order.
-        """
+        """Process jobs from the queue one at a time in FIFO order."""
         if self._queue_processor_running:
             return
 
@@ -363,8 +350,7 @@ class JobManager:
                 self._jobs[job_id].queue_position = idx + 1
 
     async def _simulate_processing(self, job_id: str) -> None:
-        """
-        Simulate photogrammetry processing with progress updates.
+        """Simulate photogrammetry processing with progress updates.
 
         Args:
             job_id: The job identifier
@@ -444,8 +430,7 @@ class JobManager:
     async def _send_progress_update(
         self, job_id: str, progress: int, message: str
     ) -> None:
-        """
-        Send the progress update to all subscribed WebSocket connections.
+        """Send the progress update to all subscribed WebSocket connections.
 
         Args:
             job_id: The job identifier
@@ -479,8 +464,7 @@ class JobManager:
             await self.unregister_websocket(connection_id)
 
     async def cancel_job(self, job_id: str) -> bool:
-        """
-        Cancel a processing job.
+        """Cancel a processing job.
 
         Args:
             job_id: The job identifier

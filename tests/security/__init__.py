@@ -1,5 +1,4 @@
-"""
-Security testing package for the Meshroom WebApp.
+"""Security testing package for the Meshroom WebApp.
 
 This package contains security-related tests including vulnerability scanning
 and static security analysis.

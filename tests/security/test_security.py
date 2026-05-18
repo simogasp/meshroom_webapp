@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Security testing script for the Meshroom WebApp project.
+"""Security testing script for the Meshroom WebApp project.
 
 This script runs security checks including vulnerability scanning with safety
 and static analysis with bandit to identify potential security issues.
@@ -30,8 +29,7 @@ class SecurityTester:
     """Runs security tests for the Meshroom WebApp project."""
 
     def __init__(self, project_root: Path, output_dir: Path | None = None):
-        """
-        Initialize the security tester.
+        """Initialize the security tester.
 
         Args:
             project_root: Path to the project root directory
@@ -94,8 +92,7 @@ class SecurityTester:
             return False, None
 
     def run_safety_check(self) -> tuple[bool, dict | None]:
-        """
-        Run the safety check for known security vulnerabilities in dependencies.
+        """Run the safety check for known security vulnerabilities in dependencies.
 
         Returns:
             Tuple of (success, vulnerabilities_data)
@@ -199,8 +196,7 @@ class SecurityTester:
             )
 
     def run_bandit_scan(self) -> tuple[bool, dict | None]:
-        """
-        Run bandit static analysis security scan.
+        """Run bandit static analysis security scan.
 
         Returns:
             Tuple of (success, scan_results)
@@ -282,8 +278,7 @@ class SecurityTester:
         safety_result: tuple[bool, dict | None],
         bandit_result: tuple[bool, dict | None],
     ) -> bool:
-        """
-        Generate a summary security report.
+        """Generate a summary security report.
 
         Args:
             safety_result: Results from safety check
@@ -349,8 +344,7 @@ class SecurityTester:
         return summary["overall_status"] == "PASS"
 
     def run_all_security_tests(self) -> bool:
-        """
-        Run all security tests and generate reports.
+        """Run all security tests and generate reports.
 
         Returns:
             True if all security tests pass

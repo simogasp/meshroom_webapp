@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Backend startup and management script for testing.
+"""Backend startup and management script for testing.
 
 This script handles starting, stopping, and managing the backend server
 for integration testing purposes.
@@ -36,8 +35,7 @@ class BackendManager:
     """Manages backend server lifecycle for testing."""
 
     def __init__(self, backend_dir: str | None = None, port: int = 8000):
-        """
-        Initialize the backend manager.
+        """Initialize the backend manager.
 
         Args:
             backend_dir: Path to backend directory
@@ -54,8 +52,7 @@ class BackendManager:
         self.pid_file = Path("/tmp") / f"meshroom_backend_{port}.pid"
 
     def is_running(self) -> bool:
-        """
-        Check if the backend is currently running.
+        """Check if the backend is currently running.
 
         Returns:
             True if the backend is responding, False otherwise
@@ -67,8 +64,7 @@ class BackendManager:
             return False
 
     def get_pid(self) -> int | None:
-        """
-        Get the PID of the running backend process.
+        """Get the PID of the running backend process.
 
         Returns:
             PID if found, None otherwise
@@ -91,8 +87,7 @@ class BackendManager:
             return None
 
     def start(self) -> bool:
-        """
-        Start the backend server.
+        """Start the backend server.
 
         Returns:
             True if started successfully, False otherwise
@@ -142,8 +137,7 @@ class BackendManager:
             return False
 
     def stop(self) -> bool:
-        """
-        Stop the backend server.
+        """Stop the backend server.
 
         Returns:
             True if stopped successfully, False otherwise
@@ -225,8 +219,7 @@ class BackendManager:
             return False
 
     def wait_for_ready(self, timeout: int = 30) -> bool:
-        """
-        Wait for the backend to become ready.
+        """Wait for the backend to become ready.
 
         Args:
             timeout: Maximum time to wait in seconds
@@ -246,8 +239,7 @@ class BackendManager:
         return False
 
     def status(self) -> dict:
-        """
-        Get backend status information.
+        """Get backend status information.
 
         Returns:
             Status dictionary

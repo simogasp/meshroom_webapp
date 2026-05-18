@@ -1,5 +1,4 @@
-"""
-Integration tests for the Meshroom WebApp.
+"""Integration tests for the Meshroom WebApp.
 
 This package contains integration tests that verify the complete workflow
 between the backend and frontend components.

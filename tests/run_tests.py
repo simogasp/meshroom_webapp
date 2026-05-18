@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Test runner for the Meshroom WebApp project.
+"""Test runner for the Meshroom WebApp project.
 
 This script provides a unified interface for running different types of tests:
 - Integration tests (backend and client communication)
@@ -24,8 +23,7 @@ from typing import List, Optional, Tuple
 
 
 def setup_logging(verbose_level: str):
-    """
-    Set up logging configuration with the specified verbosity level.
+    """Set up logging configuration with the specified verbosity level.
 
     Args:
         verbose_level: Logging level (DEBUG, INFO, WARNING, ERROR)
@@ -54,8 +52,7 @@ class TestRunner:
     """Orchestrates test execution for the Meshroom WebApp."""
 
     def __init__(self, project_root: Path | None = None):
-        """
-        Initialize the test runner.
+        """Initialize the test runner.
 
         Args:
             project_root: Path to project root directory
@@ -72,8 +69,7 @@ class TestRunner:
         self.security_tests = self.tests_dir / "security" / "test_security.py"
 
     def run_command(self, cmd: list[str], description: str) -> tuple[bool, str]:
-        """
-        Run a command and return success status and output.
+        """Run a command and return success status and output.
 
         Args:
             cmd: Command to run as list of strings
@@ -123,8 +119,7 @@ class TestRunner:
         )
 
     def check_test_dependencies(self) -> bool:
-        """
-        Check if test dependencies are installed.
+        """Check if test dependencies are installed.
 
         Returns:
             True if dependencies are available, False otherwise
@@ -163,8 +158,7 @@ class TestRunner:
         return True
 
     def run_integration_tests(self, quick: bool = False) -> bool:
-        """
-        Run integration tests for backend and client communication.
+        """Run integration tests for backend and client communication.
 
         Args:
             quick: Run quick tests only
@@ -233,8 +227,7 @@ class TestRunner:
         return passed == total
 
     def run_quality_tests(self, fix_issues: bool = False) -> bool:
-        """
-        Run code quality tests.
+        """Run code quality tests.
 
         Args:
             fix_issues: Whether to automatically fix issues
@@ -254,8 +247,7 @@ class TestRunner:
         return success
 
     def run_security_tests(self) -> bool:
-        """
-        Run security tests.
+        """Run security tests.
 
         Returns:
             True if security tests pass
@@ -270,8 +262,7 @@ class TestRunner:
         return success
 
     def run_all_tests(self, quick: bool = False, fix_issues: bool = False) -> bool:
-        """
-        Run all test suites.
+        """Run all test suites.
 
         Args:
             quick: Run quick integration tests only

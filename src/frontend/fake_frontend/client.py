@@ -1,6 +1,5 @@
 #! /usr/bin/env python
-"""
-CLI client for testing the fake photogrammetry backend.
+"""CLI client for testing the fake photogrammetry backend.
 
 This module provides a command-line interface for testing the backend
 workflow, including image upload, progress monitoring via WebSocket,
@@ -27,16 +26,14 @@ logger = logging.getLogger(__name__)
 
 
 class PhotogrammetryClient:
-    """
-    Client for communicating with the fake photogrammetry backend.
+    """Client for communicating with the fake photogrammetry backend.
 
     Handles image upload, WebSocket communication for progress updates,
     and model download functionality.
     """
 
     def __init__(self, base_url: str = "http://localhost:8000"):
-        """
-        Initialize the client.
+        """Initialize the client.
 
         Args:
             base_url: Base URL of the backend server
@@ -47,8 +44,7 @@ class PhotogrammetryClient:
         self.websocket_url = ws_url
 
     def generate_dummy_image(self, filename: str, size_kb: int = 1) -> bytes:
-        """
-        Generate dummy image data for testing.
+        """Generate dummy image data for testing.
 
         Args:
             filename: Name of the image file
@@ -74,8 +70,7 @@ class PhotogrammetryClient:
         return jpeg_header + random_data + jpeg_end
 
     def generate_test_images(self, count: int = 5) -> list[dict[str, Any]]:
-        """
-        Generate a set of test images.
+        """Generate a set of test images.
 
         Args:
             count: Number of images to generate
@@ -102,8 +97,7 @@ class PhotogrammetryClient:
         images: list[dict[str, Any]],
         extra_parameters: dict[str, Any] | None = None,
     ) -> str | None:
-        """
-        Upload images to the backend for processing.
+        """Upload images to the backend for processing.
 
         Args:
             images: List of image data dictionaries
@@ -146,8 +140,7 @@ class PhotogrammetryClient:
             return None
 
     def get_job_status(self, job_id: str) -> dict[str, Any] | None:
-        """
-        Get job status from the backend.
+        """Get job status from the backend.
 
         Args:
             job_id: The job identifier
@@ -273,8 +266,7 @@ class PhotogrammetryClient:
             return None
 
     def monitor_progress_websocket(self, job_id: str, timeout: int = 300) -> bool:
-        """
-        Monitor job progress via WebSocket.
+        """Monitor job progress via WebSocket.
 
         Args:
             job_id: The job identifier
@@ -364,8 +356,7 @@ class PhotogrammetryClient:
     def run_test_workflow(
         self, image_count: int = 5, parameters: dict[str, Any] | None = None
     ) -> bool:
-        """
-        Run a complete test workflow.
+        """Run a complete test workflow.
 
         Args:
             image_count: Number of test images to generate
@@ -428,7 +419,6 @@ class PhotogrammetryClient:
 
 def main() -> None:
     """Main entry point for the CLI client."""
-
     parser = argparse.ArgumentParser(
         description="Fake Photogrammetry Client",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,

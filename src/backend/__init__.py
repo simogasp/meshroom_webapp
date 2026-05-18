@@ -1,5 +1,4 @@
-"""
-Backend package for the Meshroom WebApp.
+"""Backend package for the Meshroom WebApp.
 
 This package contains various backend implementations for photogrammetry
 processing, including fake backends for testing and real Meshroom integration.

@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Code quality testing script for the Meshroom WebApp project.
+"""Code quality testing script for the Meshroom WebApp project.
 
 This script runs code quality checks including linting with ruff,
 type checking with mypy, and code formatting checks.
@@ -35,8 +34,7 @@ class QualityTester:
         output_dir: Path | None = None,
         fix_issues: bool = False,
     ):
-        """
-        Initialize the quality tester.
+        """Initialize the quality tester.
 
         Args:
             project_root: Path to the project root directory
@@ -49,8 +47,7 @@ class QualityTester:
         self.fix_issues = fix_issues
 
     def run_ruff_check(self) -> tuple[bool, str]:
-        """
-        Run ruff linting checks (replaces flake8 and isort).
+        """Run ruff linting checks (replaces flake8 and isort).
 
         Returns:
             Tuple of (success, output)
@@ -109,8 +106,7 @@ class QualityTester:
             return False, str(e)
 
     def run_ruff_format_check(self) -> tuple[bool, str]:
-        """
-        Run ruff format check (replaces black).
+        """Run ruff format check (replaces black).
 
         Returns:
             Tuple of (success, output)
@@ -168,8 +164,7 @@ class QualityTester:
             return False, str(e)
 
     def run_mypy_check(self) -> tuple[bool, str]:
-        """
-        Run mypy type checking.
+        """Run mypy type checking.
 
         Returns:
             Tuple of (success, output)
@@ -215,8 +210,7 @@ class QualityTester:
             return False, str(e)
 
     def run_all_quality_tests(self) -> bool:
-        """
-        Run all code quality tests.
+        """Run all code quality tests.
 
         Returns:
             True if all quality tests pass

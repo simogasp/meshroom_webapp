@@ -1,5 +1,4 @@
-"""
-Code quality testing package for the Meshroom WebApp.
+"""Code quality testing package for the Meshroom WebApp.
 
 This package contains code quality tests including linting, type checking,
 and code formatting validation.

@@ -1,5 +1,4 @@
-"""
-Test suite for the Meshroom WebApp project.
+"""Test suite for the Meshroom WebApp project.
 
 This package contains integration tests, unit tests, and utility scripts
 for testing the fake backend and frontend components.

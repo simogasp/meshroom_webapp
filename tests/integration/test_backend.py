@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Backend integration tests for the Meshroom WebApp.
+"""Backend integration tests for the Meshroom WebApp.
 
 This script tests backend startup, health checks, and basic API endpoints.
 Can be run standalone or called by CI/CD pipelines.
@@ -29,8 +28,7 @@ class BackendTester:
     """Test suite for backend API endpoints and functionality."""
 
     def __init__(self, backend_url: str = "http://localhost:8000", timeout: int = 5):
-        """
-        Initialize the backend tester.
+        """Initialize the backend tester.
 
         Args:
             backend_url: Base URL of the backend server
@@ -41,8 +39,7 @@ class BackendTester:
         self.session = requests.Session()
 
     def test_health_endpoint(self) -> bool:
-        """
-        Test the health check endpoint.
+        """Test the health check endpoint.
 
         Returns:
             True if health check passes, False otherwise
@@ -67,8 +64,7 @@ class BackendTester:
             return False
 
     def test_root_endpoint(self) -> bool:
-        """
-        Test the root endpoint.
+        """Test the root endpoint.
 
         Returns:
             True if root endpoint works, False otherwise
@@ -91,8 +87,7 @@ class BackendTester:
             return False
 
     def test_jobs_endpoint(self) -> bool:
-        """
-        Test the jobs list endpoint.
+        """Test the jobs list endpoint.
 
         Returns:
             True if jobs endpoint works, False otherwise
@@ -119,8 +114,7 @@ class BackendTester:
             return False
 
     def test_nonexistent_job(self) -> bool:
-        """
-        Test accessing a non-existent job (should return 404).
+        """Test accessing a non-existent job (should return 404).
 
         Returns:
             True if returns proper 404, False otherwise
@@ -144,8 +138,7 @@ class BackendTester:
             return False
 
     def wait_for_backend(self, max_wait: int = 30) -> bool:
-        """
-        Wait for backend to become available.
+        """Wait for backend to become available.
 
         Args:
             max_wait: Maximum time to wait in seconds
@@ -171,8 +164,7 @@ class BackendTester:
         return False
 
     def run_all_tests(self) -> bool:
-        """
-        Run all backend tests.
+        """Run all backend tests.
 
         Returns:
             True if all tests pass, False otherwise

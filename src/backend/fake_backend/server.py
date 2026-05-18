@@ -1,6 +1,5 @@
 #! /usr/bin/env python
-"""
-FastAPI backend server for fake photogrammetry processing.
+"""FastAPI backend server for fake photogrammetry processing.
 
 This module provides the main server implementation with endpoints for
 image upload, job management, and WebSocket communication for real-time
@@ -59,8 +58,7 @@ logger = logging.getLogger(__name__)
 
 
 def sanitize_filename(filename: str) -> str:
-    """
-    Sanitize a filename to prevent path traversal attacks.
+    """Sanitize a filename to prevent path traversal attacks.
 
     Args:
         filename: The original filename
@@ -102,8 +100,7 @@ def sanitize_filename(filename: str) -> str:
 
 
 def validate_job_id(job_id: str) -> str:
-    """
-    Validate and sanitize a job ID to prevent path traversal attacks.
+    """Validate and sanitize a job ID to prevent path traversal attacks.
 
     Args:
         job_id: The job identifier
@@ -135,8 +132,7 @@ def validate_job_id(job_id: str) -> str:
 def safe_join(
     base_dir: str, filename: str, sanitize_func: Callable[[str], str] | None = None
 ) -> str:
-    """
-    Safely join a base directory with a filename, preventing path traversal.
+    """Safely join a base directory with a filename, preventing path traversal.
 
     Args:
         base_dir: The base directory path
@@ -246,8 +242,7 @@ def _load_parameters_config() -> dict[str, Any]:
 
 
 def create_job_directories(job_id: str) -> dict[str, str]:
-    """
-    Create directory structure for a specific job.
+    """Create directory structure for a specific job.
 
     Args:
         job_id: The job identifier
@@ -274,8 +269,7 @@ def create_job_directories(job_id: str) -> dict[str, str]:
 
 
 def save_job_parameters(job_id: str, parameters: dict[str, Any]) -> str:
-    """
-    Save job parameters to a JSON file in the job directory.
+    """Save job parameters to a JSON file in the job directory.
 
     Args:
         job_id: The job identifier
@@ -345,8 +339,7 @@ def _parse_upload_parameters(parameters: str | None) -> dict[str, Any]:
 
 
 def _validate_safe_path(uploads_dir: str, nested_dir: str, relative_path: str) -> None:
-    """
-    Validate that the nested directory is safe and within the uploads directory.
+    """Validate that the nested directory is safe and within the uploads directory.
 
     Args:
         uploads_dir: The base uploads directory
@@ -375,8 +368,7 @@ def _validate_safe_path(uploads_dir: str, nested_dir: str, relative_path: str) -
 async def _process_uploaded_files(
     files: list[UploadFile], uploads_dir: str, file_paths: list[str] | None = None
 ) -> tuple[list[ImageData], int]:
-    """
-    Process and save uploaded files.
+    """Process and save uploaded files.
 
     Args:
         files: List of uploaded files
@@ -488,8 +480,7 @@ async def shutdown_event() -> None:
 
 @app.get("/")
 async def root() -> dict[str, Any]:
-    """
-    Root endpoint with basic server information.
+    """Root endpoint with basic server information.
 
     Returns:
         Basic server status and information
@@ -507,8 +498,7 @@ async def root() -> dict[str, Any]:
 
 @app.get("/health")
 async def health_check() -> dict[str, str]:
-    """
-    Health check endpoint.
+    """Health check endpoint.
 
     Returns:
         Service health status
@@ -518,8 +508,7 @@ async def health_check() -> dict[str, str]:
 
 @app.get("/parameters")
 async def get_parameters() -> dict[str, Any]:
-    """
-    Get dynamic processing parameter definitions.
+    """Get dynamic processing parameter definitions.
 
     Returns:
         Parameters configuration loaded at startup.
@@ -541,8 +530,7 @@ async def upload_images(
     file_paths: list[str] | None = Form(None),
     parameters: str | None = Form(None),
 ) -> JobResponse:
-    """
-    Upload images for photogrammetry processing.
+    """Upload images for photogrammetry processing.
 
     Args:
         files: List of image files to process
@@ -620,8 +608,7 @@ async def upload_images(
 
 @app.get("/queue")
 async def get_queue_status() -> dict[str, Any]:
-    """
-    Get current processing queue status.
+    """Get current processing queue status.
 
     Returns:
         Queue status information including current processing job and queued jobs
@@ -631,8 +618,7 @@ async def get_queue_status() -> dict[str, Any]:
 
 @app.get("/jobs/{job_id}")
 async def get_job_status(job_id: str) -> dict[str, Any]:
-    """
-    Get job status and information.
+    """Get job status and information.
 
     Args:
         job_id: The job identifier
@@ -764,8 +750,7 @@ async def download_model(job_id: str) -> FileResponse:
 
 @app.delete("/jobs/{job_id}")
 async def cancel_job(job_id: str) -> dict[str, str]:
-    """
-    Cancel a processing job.
+    """Cancel a processing job.
 
     Args:
         job_id: The job identifier
@@ -787,8 +772,7 @@ async def cancel_job(job_id: str) -> dict[str, str]:
 
 @app.get("/jobs")
 async def list_jobs() -> list[dict[str, Any]]:
-    """
-    List all jobs with their status.
+    """List all jobs with their status.
 
     Returns:
         List of all jobs with basic information
@@ -809,8 +793,7 @@ async def list_jobs() -> list[dict[str, Any]]:
 
 @app.websocket("/ws/{job_id}")
 async def websocket_endpoint(websocket: WebSocket, job_id: str) -> None:
-    """
-    WebSocket endpoint for real-time job progress updates.
+    """WebSocket endpoint for real-time job progress updates.
 
     Args:
         websocket: The WebSocket connection

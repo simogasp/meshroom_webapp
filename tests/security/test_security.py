@@ -41,6 +41,58 @@ class SecurityTester:
         self.output_dir = output_dir or (project_root / "reports" / "security")
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
+    def _handle_network_error(self, safety_report: Path) -> tuple[bool, dict]:
+        """Handle safety check network connectivity issues."""
+        logger.warning("Safety check failed due to network connectivity issues")
+        logger.warning("Cannot reach PyPI vulnerability database")
+        logger.warning("Skipping vulnerability check - treating as passed for CI")
+
+        with open(safety_report, "w") as f:
+            f.write(
+                '{"network_error": true, "message": "Unable to connect to vulnerability database"}'
+            )
+        return True, {"network_error": True}
+
+    def _parse_vulnerabilities(
+        self, result: subprocess.CompletedProcess
+    ) -> tuple[bool, dict | None]:
+        """Parse safety check vulnerabilities from result."""
+        try:
+            vulnerabilities = json.loads(result.stdout) if result.stdout else []
+
+            if len(vulnerabilities) == 0:
+                logger.info("No known security vulnerabilities found in dependencies")
+                return True, None
+
+            logger.warning(f"Found {len(vulnerabilities)} security vulnerabilities")
+
+            # Log summary of vulnerabilities
+            for vuln in vulnerabilities:
+                package = vuln.get("package", "Unknown")
+                version = vuln.get("installed_version", "Unknown")
+                vulnerability_id = vuln.get("vulnerability_id", "Unknown")
+                logger.warning(
+                    f"Vulnerability in {package} {version}: {vulnerability_id}"
+                )
+
+            return False, {"vulnerabilities": vulnerabilities}
+        except json.JSONDecodeError:
+            logger.error("Failed to parse safety output as JSON")
+            logger.error(f"Safety stderr: {result.stderr}")
+            logger.error(f"Safety stdout: {result.stdout}")
+            logger.error(f"Safety return code: {result.returncode}")
+
+            # Check if this is a network issue based on stderr
+            if (
+                "network" in result.stderr.lower()
+                or "connection" in result.stderr.lower()
+                or result.returncode == 68
+            ):
+                logger.warning("Treating as network error - allowing CI to pass")
+                return True, {"network_error": True}
+
+            return False, None
+
     def run_safety_check(self) -> tuple[bool, dict | None]:
         """
         Run the safety check for known security vulnerabilities in dependencies.
@@ -67,7 +119,7 @@ class SecurityTester:
                 cwd=self.project_root,
             )
 
-            # Save raw output and stderr for debugging
+            # Save raw output
             safety_report = self.output_dir / "safety_report.json"
             with open(safety_report, "w") as f:
                 f.write(result.stdout if result.stdout else "")
@@ -76,77 +128,75 @@ class SecurityTester:
 
             # Handle network connectivity issues
             if result.returncode == 68:
-                logger.warning("Safety check failed due to network connectivity issues")
-                logger.warning("Cannot reach PyPI vulnerability database")
-                logger.warning(
-                    "Skipping vulnerability check - treating as passed for CI"
-                )
-
-                # Write a placeholder report
-                with open(safety_report, "w") as f:
-                    f.write(
-                        '{"network_error": true, "message": "Unable to connect to vulnerability database"}'
-                    )
-
-                return True, {"network_error": True}
+                return self._handle_network_error(safety_report)
 
             # Parse results
             if result.returncode == 0:
                 logger.info("No known security vulnerabilities found in dependencies")
-
-                # Write empty array for successful scan with no vulnerabilities
                 with open(safety_report, "w") as f:
                     f.write("[]")
-
                 return True, None
             else:
-                try:
-                    vulnerabilities = json.loads(result.stdout) if result.stdout else []
-
-                    # Check if any vulnerabilities were actually found
-                    if len(vulnerabilities) == 0:
-                        logger.info(
-                            "No known security vulnerabilities found in dependencies"
-                        )
-                        return True, None
-
-                    logger.warning(
-                        f"Found {len(vulnerabilities)} security vulnerabilities"
-                    )
-
-                    # Log summary of vulnerabilities
-                    for vuln in vulnerabilities:
-                        package = vuln.get("package", "Unknown")
-                        version = vuln.get("installed_version", "Unknown")
-                        vulnerability_id = vuln.get("vulnerability_id", "Unknown")
-                        logger.warning(
-                            f"Vulnerability in {package} {version}: {vulnerability_id}"
-                        )
-
-                    return False, {"vulnerabilities": vulnerabilities}
-                except json.JSONDecodeError:
-                    logger.error("Failed to parse safety output as JSON")
-                    logger.error(f"Safety stderr: {result.stderr}")
-                    logger.error(f"Safety stdout: {result.stdout}")
-                    logger.error(f"Safety return code: {result.returncode}")
-
-                    # Check if this is a network issue based on stderr
-                    if (
-                        "network" in result.stderr.lower()
-                        or "connection" in result.stderr.lower()
-                        or result.returncode == 68
-                    ):
-                        logger.warning(
-                            "Treating as network error - allowing CI to pass"
-                        )
-                        return True, {"network_error": True}
-
-                    return False, None
+                return self._parse_vulnerabilities(result)
 
         except Exception as e:
             logger.error(f"Error running safety check: {e}")
-            # In case of unexpected errors, be conservative and fail
             return False, None
+
+    def _create_empty_bandit_report(self, bandit_report: Path) -> None:
+        """Create an empty bandit report structure."""
+        logger.info("Bandit did not create output file (likely no issues found)")
+        empty_report = {
+            "errors": [],
+            "generated_at": "2025-08-13T19:00:00Z",
+            "metrics": {
+                "src/": {
+                    "CONFIDENCE.HIGH": 0,
+                    "CONFIDENCE.LOW": 0,
+                    "CONFIDENCE.MEDIUM": 0,
+                    "CONFIDENCE.UNDEFINED": 0,
+                    "SEVERITY.HIGH": 0,
+                    "SEVERITY.LOW": 0,
+                    "SEVERITY.MEDIUM": 0,
+                    "SEVERITY.UNDEFINED": 0,
+                    "loc": 0,
+                    "nosec": 0,
+                    "skipped_tests": 0,
+                }
+            },
+            "results": [],
+        }
+        with open(bandit_report, "w") as f:
+            json.dump(empty_report, f, indent=2)
+        logger.info(f"Created empty bandit report at: {bandit_report}")
+
+    def _log_bandit_results(self, issues: list[dict]) -> None:
+        """Log bandit scan results summary."""
+        total_issues = len(issues)
+        logger.info(f"Bandit scan completed. Total issues: {total_issues}")
+
+        if total_issues > 0:
+            severity_counts = self._count_by_severity(issues)
+            confidence_counts = self._count_by_confidence(issues)
+            logger.info(f"Severity breakdown: {severity_counts}")
+            logger.info(f"Confidence breakdown: {confidence_counts}")
+
+        # Log high-severity issues
+        high_severity_issues = [
+            issue
+            for issue in issues
+            if issue.get("issue_severity", "").lower() in ["high", "medium"]
+        ]
+
+        for issue in high_severity_issues:
+            filename = issue.get("filename", "Unknown")
+            line_number = issue.get("line_number", "Unknown")
+            test_name = issue.get("test_name", "Unknown")
+            severity = issue.get("issue_severity", "Unknown")
+            logger.warning(
+                f"Security issue in {filename}:{line_number} "
+                f"({test_name}, severity: {severity})"
+            )
 
     def run_bandit_scan(self) -> tuple[bool, dict | None]:
         """
@@ -180,89 +230,30 @@ class SecurityTester:
                 cwd=self.project_root,
             )
 
-            # Bandit exit codes:
-            # 0 = No issues found
-            # 1 = Issues found
-            # Other = Error
             logger.info(f"Bandit exit code: {result.returncode}")
 
-            # Check if bandit created the report file
+            # Create empty report if bandit didn't create one
             if not bandit_report.exists():
-                # Bandit may not create output file when there are no issues
-                # Create an empty report structure
-                logger.info(
-                    "Bandit did not create output file (likely no issues found)"
-                )
-                empty_report = {
-                    "errors": [],
-                    "generated_at": "2025-08-13T19:00:00Z",
-                    "metrics": {
-                        "src/": {
-                            "CONFIDENCE.HIGH": 0,
-                            "CONFIDENCE.LOW": 0,
-                            "CONFIDENCE.MEDIUM": 0,
-                            "CONFIDENCE.UNDEFINED": 0,
-                            "SEVERITY.HIGH": 0,
-                            "SEVERITY.LOW": 0,
-                            "SEVERITY.MEDIUM": 0,
-                            "SEVERITY.UNDEFINED": 0,
-                            "loc": 0,
-                            "nosec": 0,
-                            "skipped_tests": 0,
-                        }
-                    },
-                    "results": [],
-                }
-                with open(bandit_report, "w") as f:
-                    json.dump(empty_report, f, indent=2)
-                logger.info(f"Created empty bandit report at: {bandit_report}")
+                self._create_empty_bandit_report(bandit_report)
 
             logger.info(f"Bandit report saved to: {bandit_report}")
 
-            # Parse results
+            # Parse and log results
             with open(bandit_report) as f:
                 scan_data = json.load(f)
 
             issues = scan_data.get("results", [])
-
-            # Log summary
-            total_issues = len(issues)
-            severity_counts = self._count_by_severity(issues)
-            confidence_counts = self._count_by_confidence(issues)
-
-            logger.info(f"Bandit scan completed. Total issues: {total_issues}")
-            if total_issues > 0:
-                logger.info(f"Severity breakdown: {severity_counts}")
-                logger.info(f"Confidence breakdown: {confidence_counts}")
-
-            # Log high-severity issues
-            high_severity_issues = [
-                issue
-                for issue in issues
-                if issue.get("issue_severity", "").lower() in ["high", "medium"]
-            ]
-
-            for issue in high_severity_issues:
-                filename = issue.get("filename", "Unknown")
-                line_number = issue.get("line_number", "Unknown")
-                test_name = issue.get("test_name", "Unknown")
-                severity = issue.get("issue_severity", "Unknown")
-                logger.warning(
-                    f"Security issue in {filename}:{line_number} "
-                    f"({test_name}, severity: {severity})"
-                )
+            self._log_bandit_results(issues)
 
             # Consider scan successful if no high-severity issues
-            success = (
-                len(
-                    [
-                        issue
-                        for issue in issues
-                        if issue.get("issue_severity", "").lower() == "high"
-                    ]
-                )
-                == 0
+            high_severity_count = len(
+                [
+                    issue
+                    for issue in issues
+                    if issue.get("issue_severity", "").lower() == "high"
+                ]
             )
+            success = high_severity_count == 0
 
             return success, scan_data
 

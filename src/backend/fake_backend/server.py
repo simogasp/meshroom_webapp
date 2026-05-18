@@ -200,9 +200,17 @@ os.makedirs(base_output_dir, exist_ok=True)
 _parameters_config: dict[str, Any] = {}
 
 
+def _validate_parameter(idx: int, param: Any) -> None:
+    """Validate a single parameter definition."""
+    if not isinstance(param, dict):
+        raise ValueError(f"Parameter at index {idx} is not an object")
+    for key in ["name", "type", "description", "default"]:
+        if key not in param:
+            raise ValueError(f"Parameter {param.get('name', idx)} missing '{key}'")
+
+
 def _load_parameters_config() -> dict[str, Any]:
-    """
-    Load dynamic parameters configuration from JSON file.
+    """Load dynamic parameters configuration from JSON file.
 
     Returns:
         The parameters configuration dictionary.
@@ -212,7 +220,6 @@ def _load_parameters_config() -> dict[str, Any]:
         ValueError: If the parameters file is invalid.
     """
     global _parameters_config
-    # Parameters file lives alongside server code in this fake backend
     params_path = os.path.join(
         os.path.dirname(os.path.abspath(__file__)), "parameters.json"
     )
@@ -223,20 +230,16 @@ def _load_parameters_config() -> dict[str, Any]:
     with open(params_path, encoding="utf-8") as f:
         data = json.load(f)
 
-    # Basic validation according to documented schema (lightweight)
+    # Basic validation according to documented schema
     if not isinstance(data, dict) or "parameters" not in data:
         raise ValueError("Invalid parameters.json format: missing 'parameters' array")
 
     if not isinstance(data["parameters"], list):
         raise ValueError("Invalid parameters.json: 'parameters' must be an array")
 
-    # Validate minimal fields for each parameter
+    # Validate each parameter
     for idx, p in enumerate(data["parameters"]):
-        if not isinstance(p, dict):
-            raise ValueError(f"Parameter at index {idx} is not an object")
-        for key in ["name", "type", "description", "default"]:
-            if key not in p:
-                raise ValueError(f"Parameter {p.get('name', idx)} missing '{key}'")
+        _validate_parameter(idx, p)
 
     _parameters_config = data
     return data
@@ -301,9 +304,24 @@ def save_job_parameters(job_id: str, parameters: dict[str, Any]) -> str:
     return parameters_path
 
 
+def _load_default_parameters() -> dict[str, Any]:
+    """Load default parameters from configuration."""
+    global _parameters_config
+    if not _parameters_config:
+        try:
+            _load_parameters_config()
+        except (FileNotFoundError, ValueError, json.JSONDecodeError):
+            _parameters_config = {"parameters": []}
+
+    defaults = {}
+    for p in _parameters_config.get("parameters", []):
+        if "name" in p and "default" in p:
+            defaults[p["name"]] = p["default"]
+    return defaults
+
+
 def _parse_upload_parameters(parameters: str | None) -> dict[str, Any]:
-    """
-    Parse dynamic parameters from the upload request.
+    """Parse dynamic parameters from the upload request.
 
     Args:
         parameters: Optional JSON string of dynamic parameters
@@ -314,29 +332,16 @@ def _parse_upload_parameters(parameters: str | None) -> dict[str, Any]:
     Raises:
         HTTPException: If parameters are invalid
     """
-    dynamic_params: dict[str, Any] = {}
     if parameters:
         try:
             parsed = json.loads(parameters)
-            if isinstance(parsed, dict):
-                dynamic_params = parsed
-            else:
+            if not isinstance(parsed, dict):
                 raise ValueError("'parameters' must be a JSON object")
+            return parsed
         except (json.JSONDecodeError, ValueError) as e:
             raise HTTPException(status_code=400, detail=f"Invalid parameters: {e}")
     else:
-        # Fill defaults from loaded parameters config
-        global _parameters_config
-        if not _parameters_config:
-            try:
-                _load_parameters_config()
-            except (FileNotFoundError, ValueError, json.JSONDecodeError):
-                _parameters_config = {"parameters": []}
-        for p in _parameters_config.get("parameters", []):
-            if "name" in p and "default" in p:
-                dynamic_params[p["name"]] = p["default"]
-
-    return dynamic_params
+        return _load_default_parameters()
 
 
 def _validate_safe_path(uploads_dir: str, nested_dir: str, relative_path: str) -> None:
@@ -658,10 +663,46 @@ async def get_job_status(job_id: str) -> dict[str, Any]:
     }
 
 
+def _generate_model_data(job_id: str) -> tuple[bytes, str]:
+    """Generate model data based on configuration.
+
+    Args:
+        job_id: The job identifier
+
+    Returns:
+        Tuple of (model_data, model_type)
+    """
+    if USE_REAL_MODEL:
+        return generate_real_model(job_id), "real"
+    else:
+        return generate_dummy_model(job_id), "dummy"
+
+
+def _save_model_file(job_id: str, model_data: bytes) -> tuple[str, str]:
+    """Save model data to file.
+
+    Args:
+        job_id: The job identifier
+        model_data: The model binary data
+
+    Returns:
+        Tuple of (model_path, secure_filename)
+    """
+    job_dirs = create_job_directories(job_id)
+    models_dir = job_dirs["models_dir"]
+
+    secure_filename = f"model_{secrets.token_hex(16)}.glb"
+    model_path = os.path.join(models_dir, secure_filename)
+
+    with open(model_path, "wb") as f:
+        f.write(model_data)
+
+    return model_path, secure_filename
+
+
 @app.get("/jobs/{job_id}/download")
 async def download_model(job_id: str) -> FileResponse:
-    """
-    Download the generated 3D model.
+    """Download the generated 3D model.
 
     Args:
         job_id: The job identifier
@@ -672,7 +713,7 @@ async def download_model(job_id: str) -> FileResponse:
     Raises:
         HTTPException: If the job was not found or not completed
     """
-    # Validate job_id immediately to prevent any security issues
+    # Validate job_id immediately
     try:
         validated_job_id = validate_job_id(job_id)
     except ValueError as e:
@@ -689,35 +730,17 @@ async def download_model(job_id: str) -> FileResponse:
         )
 
     try:
-        # Generate the model file (real or fake based on configuration)
-        if USE_REAL_MODEL:
-            model_data = generate_real_model(validated_job_id)
-            model_type = "real"
-        else:
-            model_data = generate_dummy_model(validated_job_id)
-            model_type = "dummy"
+        # Generate and save the model
+        model_data, model_type = _generate_model_data(validated_job_id)
+        model_path, secure_filename = _save_model_file(validated_job_id, model_data)
 
-        # Create job-specific model directory if it doesn't exist
-        job_dirs = create_job_directories(validated_job_id)
-        models_dir = job_dirs["models_dir"]
-
-        # Create a secure filename for the model
-        secure_filename = f"model_{secrets.token_hex(16)}.glb"
-        # NOSONAR: This path construction uses cryptographically secure random data, not user input
-        model_path = os.path.join(models_dir, secure_filename)
-
-        # Save model to file
-        # NOSONAR: Path is constructed with secure random data, validated base directory
-        with open(model_path, "wb") as f:
-            f.write(model_data)
-
-        # Update job with result path (relative to project root for logs)
+        # Update job with result path
         rel_model_path = os.path.relpath(model_path, start=project_root)
         job.result_file_path = rel_model_path
 
         logger.info(
-            f"Generated {model_type} model for job {validated_job_id}: {len(model_data)} bytes -> "
-            f"{model_path}"
+            f"Generated {model_type} model for job {validated_job_id}: "
+            f"{len(model_data)} bytes -> {model_path}"
         )
 
         return FileResponse(
@@ -736,8 +759,6 @@ async def download_model(job_id: str) -> FileResponse:
         logger.error(f"Model file I/O error for job {job_id}: {e}")
         raise HTTPException(status_code=500, detail="Error reading model file.")
     except ValueError as e:
-        # This catches our validation errors which are already handled above
-        # But we include it here for completeness
         raise HTTPException(status_code=400, detail=str(e))
 
 

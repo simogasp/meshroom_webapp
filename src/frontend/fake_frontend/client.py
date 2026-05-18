@@ -167,9 +167,60 @@ class PhotogrammetryClient:
             logger.error(f"Error getting job status: {e}")
             return None
 
-    def download_model(self, job_id: str, output_dir: str | None = None) -> str | None:
+    def _get_output_directory(self, output_dir: str | None) -> str:
+        """Determine the output directory for downloads.
+
+        Args:
+            output_dir: User-specified directory or None
+
+        Returns:
+            Absolute path to output directory
         """
-        Download the generated 3D model.
+        if output_dir is not None:
+            return output_dir
+
+        # Get the project root - need to go up 5 levels from this file
+        current_file = os.path.abspath(__file__)
+        project_root = os.path.dirname(
+            os.path.dirname(os.path.dirname(os.path.dirname(current_file)))
+        )
+        return os.path.join(
+            project_root, "output", "frontend", "fake_frontend", "downloads"
+        )
+
+    def _attempt_download(self, job_id: str, output_dir: str) -> str | None:
+        """Attempt a single download of the model.
+
+        Args:
+            job_id: The job identifier
+            output_dir: Directory to save the model
+
+        Returns:
+            Path to downloaded file or None if not ready
+
+        Raises:
+            Exception: On network or file errors
+        """
+        response = self.session.get(f"{self.base_url}/jobs/{job_id}/download")
+
+        if response.status_code == 200:
+            filename = f"{job_id}_model.glb"
+            filepath = os.path.join(output_dir, filename)
+
+            with open(filepath, "wb") as f:
+                f.write(response.content)
+
+            logger.info(f"Model downloaded: {filepath} ({len(response.content)} bytes)")
+            return filepath
+        elif response.status_code == 400 and "not completed" in response.text:
+            # Job not ready yet
+            return None
+        else:
+            logger.error(f"Download failed: {response.status_code} - {response.text}")
+            return None
+
+    def download_model(self, job_id: str, output_dir: str | None = None) -> str | None:
+        """Download the generated 3D model.
 
         Args:
             job_id: The job identifier
@@ -180,19 +231,7 @@ class PhotogrammetryClient:
             Path to downloaded file or None if failed
         """
         try:
-            # Use the project's output directory if not specified
-            if output_dir is None:
-                # Get the project root - need to go up 5 levels from this file
-                # client.py -> fake_frontend -> frontend -> src -> project_root
-                current_file = os.path.abspath(__file__)
-                project_root = os.path.dirname(
-                    os.path.dirname(os.path.dirname(os.path.dirname(current_file)))
-                )
-                output_dir = os.path.join(
-                    project_root, "output", "frontend", "fake_frontend", "downloads"
-                )
-
-            # Create output directory
+            output_dir = self._get_output_directory(output_dir)
             os.makedirs(output_dir, exist_ok=True)
 
             # Retry mechanism for download (handles race condition)
@@ -201,47 +240,21 @@ class PhotogrammetryClient:
 
             for attempt in range(max_retries):
                 try:
-                    # Download model
-                    response = self.session.get(
-                        f"{self.base_url}/jobs/{job_id}/download"
-                    )
+                    result = self._attempt_download(job_id, output_dir)
 
-                    if response.status_code == 200:
-                        filename = f"{job_id}_model.glb"
-                        filepath = os.path.join(output_dir, filename)
+                    if result is not None:
+                        return result
 
-                        with open(filepath, "wb") as f:
-                            f.write(response.content)
-
+                    # Job not ready, retry if attempts remain
+                    if attempt < max_retries - 1:
                         logger.info(
-                            f"Model downloaded: {filepath} "
-                            f"({len(response.content)} bytes)"
+                            f"Job not yet marked as completed, "
+                            f"retrying in {retry_delay}s... "
+                            f"(attempt {attempt + 1}/{max_retries})"
                         )
-                        return filepath
-                    elif (
-                        response.status_code == 400 and "not completed" in response.text
-                    ):
-                        # Job status race condition - wait and retry
-                        if attempt < max_retries - 1:
-                            msg = (
-                                f"Job not yet marked as completed, "
-                                f"retrying in {retry_delay}s... "
-                                f"(attempt {attempt + 1}/{max_retries})"
-                            )
-                            logger.info(msg)
-                            time.sleep(retry_delay)
-                            continue
-                        else:
-                            logger.error(
-                                f"Download failed after {max_retries} "
-                                f"attempts: {response.status_code} - "
-                                f"{response.text}"
-                            )
-                            return None
+                        time.sleep(retry_delay)
                     else:
-                        logger.error(
-                            f"Download failed: {response.status_code} - {response.text}"
-                        )
+                        logger.error(f"Download failed after {max_retries} attempts")
                         return None
 
                 except Exception as e:
@@ -250,11 +263,9 @@ class PhotogrammetryClient:
                             f"Download attempt {attempt + 1} failed: {e}, retrying..."
                         )
                         time.sleep(retry_delay)
-                        continue
                     else:
                         raise e
 
-            # If we get here, all retry attempts failed
             return None
 
         except Exception as e:

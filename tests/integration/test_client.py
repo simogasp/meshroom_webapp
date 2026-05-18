@@ -21,6 +21,7 @@ from typing import Optional
 import requests
 import websocket
 
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -70,7 +71,7 @@ class ClientIntegrationTester:
 
         return jpeg_header + random_data + jpeg_end
 
-    def test_image_upload(self, num_images: int = 3) -> Optional[str]:
+    def test_image_upload(self, num_images: int = 3) -> str | None:
         """
         Test uploading images to the backend using dynamic parameters JSON.
 
@@ -86,7 +87,7 @@ class ClientIntegrationTester:
             # Generate test images
             files = []
             for i in range(num_images):
-                filename = f"test_image_{i+1:03d}.jpg"
+                filename = f"test_image_{i + 1:03d}.jpg"
                 size_kb = random.randint(1, 5)  # Small test images
                 content = self.generate_test_image(filename, size_kb)
                 files.append(("files", (filename, content, "image/jpeg")))

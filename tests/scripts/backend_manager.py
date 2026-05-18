@@ -24,6 +24,7 @@ from typing import Optional
 
 import requests
 
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -34,7 +35,7 @@ logger = logging.getLogger(__name__)
 class BackendManager:
     """Manages backend server lifecycle for testing."""
 
-    def __init__(self, backend_dir: Optional[str] = None, port: int = 8000):
+    def __init__(self, backend_dir: str | None = None, port: int = 8000):
         """
         Initialize the backend manager.
 
@@ -74,7 +75,7 @@ class BackendManager:
         """
         try:
             if self.pid_file.exists():
-                with open(self.pid_file, "r") as f:
+                with open(self.pid_file) as f:
                     pid = int(f.read().strip())
 
                 # Check if the process is actually running
@@ -126,7 +127,7 @@ class BackendManager:
                 f.write(str(process.pid))
 
             # Wait for the backend to be ready
-            for i in range(30):
+            for _i in range(30):
                 if self.is_running():
                     logger.info(f"Backend started successfully (PID: {process.pid})")
                     return True
@@ -166,7 +167,7 @@ class BackendManager:
             os.killpg(os.getpgid(pid), signal.SIGTERM)
 
             # Wait for the process to stop
-            for i in range(10):
+            for _i in range(10):
                 try:
                     os.kill(pid, 0)
                     time.sleep(0.5)

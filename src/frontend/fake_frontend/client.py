@@ -18,6 +18,7 @@ from typing import Any, Dict, List, Optional
 import requests
 import websocket
 
+
 # Configure logging (will be adjusted in main based on --verbose)
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -57,9 +58,7 @@ class PhotogrammetryClient:
             Dummy image data as bytes
         """
         # Create the dummy JPEG-like header
-        jpeg_header = (
-            b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01" b"\x00H\x00H\x00\x00"
-        )
+        jpeg_header = b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00H\x00H\x00\x00"
 
         # Generate random data to reach desired size
         target_size = size_kb * 1024
@@ -74,7 +73,7 @@ class PhotogrammetryClient:
 
         return jpeg_header + random_data + jpeg_end
 
-    def generate_test_images(self, count: int = 5) -> List[Dict[str, Any]]:
+    def generate_test_images(self, count: int = 5) -> list[dict[str, Any]]:
         """
         Generate a set of test images.
 
@@ -86,7 +85,7 @@ class PhotogrammetryClient:
         """
         images = []
         for i in range(count):
-            filename = f"test_image_{i+1:03d}.jpg"
+            filename = f"test_image_{i + 1:03d}.jpg"
             # nosec B311: Using random for test data generation only
             size_kb = random.randint(1, 10)  # Random size between 1-10 KB
             content = self.generate_dummy_image(filename, size_kb)
@@ -100,9 +99,9 @@ class PhotogrammetryClient:
 
     def upload_images(
         self,
-        images: List[Dict[str, Any]],
-        extra_parameters: Optional[Dict[str, Any]] = None,
-    ) -> Optional[str]:
+        images: list[dict[str, Any]],
+        extra_parameters: dict[str, Any] | None = None,
+    ) -> str | None:
         """
         Upload images to the backend for processing.
 
@@ -122,7 +121,7 @@ class PhotogrammetryClient:
                 )
 
             # Prepare the form data
-            data: Dict[str, Any] = {}
+            data: dict[str, Any] = {}
             if extra_parameters:
                 data["parameters"] = json.dumps(extra_parameters)
 
@@ -146,7 +145,7 @@ class PhotogrammetryClient:
             logger.error(f"Upload error: {e}")
             return None
 
-    def get_job_status(self, job_id: str) -> Optional[Dict[str, Any]]:
+    def get_job_status(self, job_id: str) -> dict[str, Any] | None:
         """
         Get job status from the backend.
 
@@ -159,7 +158,7 @@ class PhotogrammetryClient:
         try:
             response = self.session.get(f"{self.base_url}/jobs/{job_id}")
             if response.status_code == 200:
-                result: Dict[str, Any] = response.json()
+                result: dict[str, Any] = response.json()
                 return result
             else:
                 logger.error(f"Failed to get job status: {response.status_code}")
@@ -168,9 +167,7 @@ class PhotogrammetryClient:
             logger.error(f"Error getting job status: {e}")
             return None
 
-    def download_model(
-        self, job_id: str, output_dir: Optional[str] = None
-    ) -> Optional[str]:
+    def download_model(self, job_id: str, output_dir: str | None = None) -> str | None:
         """
         Download the generated 3D model.
 
@@ -243,16 +240,14 @@ class PhotogrammetryClient:
                             return None
                     else:
                         logger.error(
-                            f"Download failed: {response.status_code} - "
-                            f"{response.text}"
+                            f"Download failed: {response.status_code} - {response.text}"
                         )
                         return None
 
                 except Exception as e:
                     if attempt < max_retries - 1:
                         logger.warning(
-                            f"Download attempt {attempt + 1} failed: {e}, "
-                            f"retrying..."
+                            f"Download attempt {attempt + 1} failed: {e}, retrying..."
                         )
                         time.sleep(retry_delay)
                         continue
@@ -356,7 +351,7 @@ class PhotogrammetryClient:
             return False
 
     def run_test_workflow(
-        self, image_count: int = 5, parameters: Optional[Dict[str, Any]] = None
+        self, image_count: int = 5, parameters: dict[str, Any] | None = None
     ) -> bool:
         """
         Run a complete test workflow.
@@ -472,7 +467,7 @@ def main() -> None:
     logger.info("Backend is running and healthy")
     logger.info("")
 
-    params_dict: Optional[Dict[str, Any]] = None
+    params_dict: dict[str, Any] | None = None
     if args.parameters:
         try:
             params_dict = json.loads(args.parameters)

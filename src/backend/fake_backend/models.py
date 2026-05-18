@@ -48,7 +48,7 @@ class ImageData:
     content: bytes
     content_type: str
     size: int
-    original_path: Optional[str] = None  # For directory structure preservation
+    original_path: str | None = None  # For directory structure preservation
     upload_time: datetime = field(default_factory=datetime.now)
 
     @property
@@ -63,15 +63,15 @@ class ProcessingJob:
 
     job_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     status: JobStatus = JobStatus.PENDING
-    images: List[ImageData] = field(default_factory=list)
-    parameters: Dict[str, Any] = field(default_factory=dict)
+    images: list[ImageData] = field(default_factory=list)
+    parameters: dict[str, Any] = field(default_factory=dict)
     progress: int = 0
     created_at: datetime = field(default_factory=datetime.now)
-    started_at: Optional[datetime] = None
-    completed_at: Optional[datetime] = None
-    error_message: Optional[str] = None
-    result_file_path: Optional[str] = None
-    queue_position: Optional[int] = None
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
+    error_message: str | None = None
+    result_file_path: str | None = None
+    queue_position: int | None = None
 
     @property
     def total_images(self) -> int:
@@ -104,7 +104,7 @@ class ProcessingJob:
         return self.status == JobStatus.PROCESSING
 
     @property
-    def duration_seconds(self) -> Optional[float]:
+    def duration_seconds(self) -> float | None:
         """Get job duration in seconds if completed."""
         if self.started_at and self.completed_at:
             return (self.completed_at - self.started_at).total_seconds()
@@ -116,9 +116,9 @@ class WebSocketConnection:
     """Represents an active WebSocket connection."""
 
     connection_id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    job_id: Optional[str] = None
+    job_id: str | None = None
     connected_at: datetime = field(default_factory=datetime.now)
-    last_message_at: Optional[datetime] = None
+    last_message_at: datetime | None = None
 
     @property
     def is_subscribed(self) -> bool:

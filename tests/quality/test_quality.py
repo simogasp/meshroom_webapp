@@ -2,7 +2,7 @@
 """
 Code quality testing script for the Meshroom WebApp project.
 
-This script runs code quality checks including linting with flake8,
+This script runs code quality checks including linting with ruff,
 type checking with mypy, and code formatting checks.
 
 Usage:
@@ -18,6 +18,7 @@ import sys
 from pathlib import Path
 from typing import Optional, Tuple
 
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -31,7 +32,7 @@ class QualityTester:
     def __init__(
         self,
         project_root: Path,
-        output_dir: Optional[Path] = None,
+        output_dir: Path | None = None,
         fix_issues: bool = False,
     ):
         """
@@ -47,57 +48,126 @@ class QualityTester:
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.fix_issues = fix_issues
 
-    def run_flake8_check(self) -> Tuple[bool, str]:
+    def run_ruff_check(self) -> tuple[bool, str]:
         """
-        Run flake8 linting checks.
+        Run ruff linting checks (replaces flake8 and isort).
 
         Returns:
             Tuple of (success, output)
         """
-        logger.info("Running flake8 linting checks...")
+        action = "Fixing" if self.fix_issues else "Checking"
+        logger.info(f"{action} code with ruff linter...")
 
         try:
-            # Use .flake8 configuration file for comprehensive settings
-            # This includes max-line-length, exclusions, per-file ignores, etc.
-            flake8_args = [
+            # Ruff check includes linting, pyflakes, isort, and more
+            ruff_args = [
                 sys.executable,
                 "-m",
-                "flake8",
+                "ruff",
+                "check",
                 "src/",
                 "tests/",
-                "--format=%(path)s:%(row)d:%(col)d: %(code)s %(text)s",
+                # Configuration is automatically read from pyproject.toml
             ]
 
+            if self.fix_issues:
+                ruff_args.append("--fix")
+
             # Save output to file
-            output_file = self.output_dir / "flake8_report.txt"
+            output_file = self.output_dir / "ruff_report.txt"
 
             result = subprocess.run(
-                flake8_args, capture_output=True, text=True, cwd=self.project_root
+                ruff_args, capture_output=True, text=True, cwd=self.project_root
             )
 
             # Save report
             with open(output_file, "w") as f:
-                f.write("Flake8 Report\n")
-                f.write("=============\n\n")
+                f.write("Ruff Linting Report\n")
+                f.write("===================\n\n")
                 f.write(f"Return code: {result.returncode}\n\n")
                 f.write(f"STDOUT:\n{result.stdout}\n\n")
                 f.write(f"STDERR:\n{result.stderr}\n")
 
-            logger.info(f"Flake8 report saved to: {output_file}")
+            logger.info(f"Ruff report saved to: {output_file}")
 
             if result.returncode == 0:
-                logger.info("Flake8 checks passed - no linting issues found")
+                if self.fix_issues:
+                    logger.info("Ruff fixes applied successfully")
+                else:
+                    logger.info("Ruff checks passed - no linting issues found")
                 return True, result.stdout
             else:
-                logger.warning("Flake8 found linting issues")
+                if self.fix_issues:
+                    logger.warning("Ruff found issues that could not be auto-fixed")
+                else:
+                    logger.warning("Ruff found linting issues")
                 logger.warning(f"Issues:\n{result.stdout}")
                 return False, result.stdout
 
         except Exception as e:
-            logger.error(f"Error running flake8: {e}")
+            logger.error(f"Error running ruff: {e}")
             return False, str(e)
 
-    def run_mypy_check(self) -> Tuple[bool, str]:
+    def run_ruff_format_check(self) -> tuple[bool, str]:
+        """
+        Run ruff format check (replaces black).
+
+        Returns:
+            Tuple of (success, output)
+        """
+        action = "Formatting" if self.fix_issues else "Checking format of"
+        logger.info(f"{action} code with ruff formatter...")
+
+        try:
+            ruff_args = [
+                sys.executable,
+                "-m",
+                "ruff",
+                "format",
+                "src/",
+                "tests/",
+                # Configuration is automatically read from pyproject.toml
+            ]
+
+            if not self.fix_issues:
+                ruff_args.append("--check")
+
+            # Save output to file
+            output_file = self.output_dir / "ruff_format_report.txt"
+
+            result = subprocess.run(
+                ruff_args, capture_output=True, text=True, cwd=self.project_root
+            )
+
+            # Save report
+            with open(output_file, "w") as f:
+                f.write("Ruff Format Report\n")
+                f.write("==================\n\n")
+                f.write(f"Return code: {result.returncode}\n\n")
+                f.write(f"STDOUT:\n{result.stdout}\n\n")
+                f.write(f"STDERR:\n{result.stderr}\n")
+
+            logger.info(f"Ruff format report saved to: {output_file}")
+
+            if result.returncode == 0:
+                if self.fix_issues:
+                    logger.info("Code formatting applied successfully")
+                else:
+                    logger.info("Code formatting checks passed")
+                return True, result.stdout
+            else:
+                if self.fix_issues:
+                    logger.warning("Ruff format encountered errors")
+                else:
+                    logger.warning("Code formatting issues found")
+                logger.warning(f"Output:\n{result.stdout}")
+                return False, result.stdout
+
+        except Exception as e:
+            logger.error(f"Error running ruff format: {e}")
+            return False, str(e)
+
+    def run_mypy_check(self) -> tuple[bool, str]:
         """
         Run mypy type checking.
 
@@ -144,122 +214,6 @@ class QualityTester:
             logger.error(f"Error running mypy: {e}")
             return False, str(e)
 
-    def run_black_check(self) -> Tuple[bool, str]:
-        """
-        Run black code formatting check.
-
-        Returns:
-            Tuple of (success, output)
-        """
-        action = "Fixing" if self.fix_issues else "Checking"
-        logger.info(f"{action} code formatting with black...")
-
-        try:
-            black_args = [
-                sys.executable,
-                "-m",
-                "black",
-                "src/",
-                "tests/",
-                # Configuration is automatically read from pyproject.toml
-            ]
-
-            if not self.fix_issues:
-                black_args.extend(["--check", "--diff"])
-
-            # Save output to file
-            output_file = self.output_dir / "black_report.txt"
-
-            result = subprocess.run(
-                black_args, capture_output=True, text=True, cwd=self.project_root
-            )
-
-            # Save report
-            with open(output_file, "w") as f:
-                f.write("Black Report\n")
-                f.write("============\n\n")
-                f.write(f"Return code: {result.returncode}\n\n")
-                f.write(f"STDOUT:\n{result.stdout}\n\n")
-                f.write(f"STDERR:\n{result.stderr}\n")
-
-            logger.info(f"Black report saved to: {output_file}")
-
-            if result.returncode == 0:
-                if self.fix_issues:
-                    logger.info("Code formatting applied successfully")
-                else:
-                    logger.info("Code formatting checks passed")
-                return True, result.stdout
-            else:
-                if self.fix_issues:
-                    logger.warning("Black encountered errors while formatting")
-                else:
-                    logger.warning("Code formatting issues found")
-                logger.warning(f"Output:\n{result.stdout}")
-                return False, result.stdout
-
-        except Exception as e:
-            logger.error(f"Error running black: {e}")
-            return False, str(e)
-
-    def run_isort_check(self) -> Tuple[bool, str]:
-        """
-        Run isort import sorting check.
-
-        Returns:
-            Tuple of (success, output)
-        """
-        action = "Fixing" if self.fix_issues else "Checking"
-        logger.info(f"{action} import sorting with isort...")
-
-        try:
-            isort_args = [
-                sys.executable,
-                "-m",
-                "isort",
-                "src/",
-                "tests/",
-                # Configuration is automatically read from pyproject.toml
-            ]
-
-            if not self.fix_issues:
-                isort_args.extend(["--check-only", "--diff"])
-
-            # Save output to file
-            output_file = self.output_dir / "isort_report.txt"
-
-            result = subprocess.run(
-                isort_args, capture_output=True, text=True, cwd=self.project_root
-            )
-
-            # Save report
-            with open(output_file, "w") as f:
-                f.write("isort Report\n")
-                f.write("============\n\n")
-                f.write(f"Return code: {result.returncode}\n\n")
-                f.write(f"STDOUT:\n{result.stdout}\n\n")
-                f.write(f"STDERR:\n{result.stderr}\n")
-
-            logger.info(f"isort report saved to: {output_file}")
-
-            if result.returncode == 0:
-                if self.fix_issues:
-                    logger.info("Import sorting applied successfully")
-                else:
-                    logger.info("Import sorting checks passed")
-                return True, result.stdout
-            else:
-                if self.fix_issues:
-                    logger.warning("isort encountered errors while sorting")
-                else:
-                    logger.warning("Import sorting issues found")
-                logger.warning(f"Output:\n{result.stdout}")
-                return False, result.stdout
-
-        except Exception as e:
-            logger.error(f"Error running isort: {e}")
-            return False, str(e)
-
     def run_all_quality_tests(self) -> bool:
         """
         Run all code quality tests.
@@ -277,10 +231,9 @@ class QualityTester:
         results = []
 
         # Run all checks
-        results.append(("Flake8 Linting", self.run_flake8_check()))
+        results.append(("Ruff Linting", self.run_ruff_check()))
+        results.append(("Ruff Formatting", self.run_ruff_format_check()))
         results.append(("MyPy Type Checking", self.run_mypy_check()))
-        results.append(("Black Formatting", self.run_black_check()))
-        results.append(("isort Import Sorting", self.run_isort_check()))
 
         # Summary
         logger.info("=" * 60)

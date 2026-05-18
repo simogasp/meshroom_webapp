@@ -18,30 +18,21 @@ The main entry point is `tests/run_tests.py`, which provides:
 
 ### 🎯 Code Quality Tools
 
-#### Linting with Flake8
+#### Linting and Formatting with Ruff
 
-- **Configuration**: `.flake8`
-- **Standards**: PEP 8 compliance with Black compatibility
+- **Tool**: Ruff (replaces flake8, black, and isort)
+- **Configuration**: `pyproject.toml` [tool.ruff]
+- **Standards**: PEP 8 compliance, import sorting, code formatting
+- **Features**: Extremely fast (10-100x faster), single tool for all checks
 - **Line length**: 88 characters
 - **Exclusions**: Build artifacts, reports, virtual environments
 
 #### Type Checking with MyPy
 
-- **Configuration**: `pyproject.toml` (includes [tool.mypy], [tool.black], [tool.isort], [tool.bandit])
+- **Configuration**: `pyproject.toml` (includes [tool.ruff], [tool.mypy], [tool.bandit])
 - **Features**: Strict optional checking, redundant cast warnings
 - **Target**: Python 3.9+
 
-#### Code Formatting with Black
-
-- **Configuration**: `pyproject.toml`
-- **Line length**: 88 characters
-- **Target**: Python 3.9+
-- **Integration**: Compatible with flake8 and isort
-
-#### Import Sorting with isort
-
-- **Configuration**: `pyproject.toml`
-- **Profile**: Black compatibility
 - **Features**: Automatic import organization
 
 ### 🛡️ Security Tools
@@ -111,18 +102,23 @@ uv run tests/run_tests.py --verbose DEBUG
 #### Format Code
 
 ```bash
-# Format with black
-black src/ tests/
+# Check and fix with ruff
+ruff check --fix src/ tests/
 
-# Sort imports
-isort src/ tests/
+# Format with ruff
+ruff format src/ tests/
 ```
 
 #### Run Individual Quality Checks
 
 ```bash
-# Linting
-flake8 src/ tests/
+# Linting and formatting
+ruff check src/ tests/
+ruff format --check src/ tests/
+
+# Auto-fix issues
+ruff check --fix src/ tests/
+ruff format src/ tests/
 
 # Type checking
 mypy src/
@@ -170,10 +166,9 @@ The pipeline runs on:
 
 - **Location**: `reports/` directory (excluded from version control)
 - **Quality Reports**: `reports/quality/`
-  - `flake8_report.txt`
+  - `ruff_report.txt`
+  - `ruff_format_report.txt`
   - `mypy_report.txt`
-  - `black_report.txt`
-  - `isort_report.txt`
 - **Security Reports**: `reports/security/`
   - `safety_report.json`
   - `bandit_report.json`
@@ -188,8 +183,7 @@ The pipeline runs on:
 
 ### Quality Tools Configuration
 
-- **`pyproject.toml`**: Black, isort, bandit, coverage, mypy settings
-- **`.flake8`**: Flake8 linting configuration
+- **`pyproject.toml`**: Ruff, mypy, bandit, coverage settings
 
 ### Security Configuration
 

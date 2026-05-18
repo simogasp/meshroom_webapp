@@ -14,8 +14,10 @@ import os
 import re
 import secrets
 import sys
+from collections.abc import Callable
 from datetime import datetime
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Dict, List, Optional
+
 
 # Add the parent directory to the path for imports when running directly
 if __name__ == "__main__":
@@ -34,6 +36,7 @@ from fastapi import (
 )
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+
 
 try:
     from .jobs import JobManager, generate_dummy_model, generate_real_model
@@ -130,7 +133,7 @@ def validate_job_id(job_id: str) -> str:
 
 
 def safe_join(
-    base_dir: str, filename: str, sanitize_func: Optional[Callable[[str], str]] = None
+    base_dir: str, filename: str, sanitize_func: Callable[[str], str] | None = None
 ) -> str:
     """
     Safely join a base directory with a filename, preventing path traversal.
@@ -194,10 +197,10 @@ base_output_dir = os.path.join(project_root, "output", "backend", "fake_backend"
 os.makedirs(base_output_dir, exist_ok=True)
 
 # Dynamic parameters storage
-_parameters_config: Dict[str, Any] = {}
+_parameters_config: dict[str, Any] = {}
 
 
-def _load_parameters_config() -> Dict[str, Any]:
+def _load_parameters_config() -> dict[str, Any]:
     """
     Load dynamic parameters configuration from JSON file.
 
@@ -217,7 +220,7 @@ def _load_parameters_config() -> Dict[str, Any]:
     if not os.path.exists(params_path):
         raise FileNotFoundError(f"parameters.json not found at {params_path}")
 
-    with open(params_path, "r", encoding="utf-8") as f:
+    with open(params_path, encoding="utf-8") as f:
         data = json.load(f)
 
     # Basic validation according to documented schema (lightweight)
@@ -239,7 +242,7 @@ def _load_parameters_config() -> Dict[str, Any]:
     return data
 
 
-def create_job_directories(job_id: str) -> Dict[str, str]:
+def create_job_directories(job_id: str) -> dict[str, str]:
     """
     Create directory structure for a specific job.
 
@@ -267,7 +270,7 @@ def create_job_directories(job_id: str) -> Dict[str, str]:
     }
 
 
-def save_job_parameters(job_id: str, parameters: Dict[str, Any]) -> str:
+def save_job_parameters(job_id: str, parameters: dict[str, Any]) -> str:
     """
     Save job parameters to a JSON file in the job directory.
 
@@ -298,7 +301,7 @@ def save_job_parameters(job_id: str, parameters: Dict[str, Any]) -> str:
     return parameters_path
 
 
-def _parse_upload_parameters(parameters: Optional[str]) -> Dict[str, Any]:
+def _parse_upload_parameters(parameters: str | None) -> dict[str, Any]:
     """
     Parse dynamic parameters from the upload request.
 
@@ -311,7 +314,7 @@ def _parse_upload_parameters(parameters: Optional[str]) -> Dict[str, Any]:
     Raises:
         HTTPException: If parameters are invalid
     """
-    dynamic_params: Dict[str, Any] = {}
+    dynamic_params: dict[str, Any] = {}
     if parameters:
         try:
             parsed = json.loads(parameters)
@@ -365,8 +368,8 @@ def _validate_safe_path(uploads_dir: str, nested_dir: str, relative_path: str) -
 
 
 async def _process_uploaded_files(
-    files: List[UploadFile], uploads_dir: str, file_paths: Optional[List[str]] = None
-) -> tuple[List[ImageData], int]:
+    files: list[UploadFile], uploads_dir: str, file_paths: list[str] | None = None
+) -> tuple[list[ImageData], int]:
     """
     Process and save uploaded files.
 
@@ -479,7 +482,7 @@ async def shutdown_event() -> None:
 
 
 @app.get("/")
-async def root() -> Dict[str, Any]:
+async def root() -> dict[str, Any]:
     """
     Root endpoint with basic server information.
 
@@ -498,7 +501,7 @@ async def root() -> Dict[str, Any]:
 
 
 @app.get("/health")
-async def health_check() -> Dict[str, str]:
+async def health_check() -> dict[str, str]:
     """
     Health check endpoint.
 
@@ -509,7 +512,7 @@ async def health_check() -> Dict[str, str]:
 
 
 @app.get("/parameters")
-async def get_parameters() -> Dict[str, Any]:
+async def get_parameters() -> dict[str, Any]:
     """
     Get dynamic processing parameter definitions.
 
@@ -529,9 +532,9 @@ async def get_parameters() -> Dict[str, Any]:
 
 @app.post("/upload", response_model=JobResponse)
 async def upload_images(
-    files: List[UploadFile] = File(...),
-    file_paths: Optional[List[str]] = Form(None),
-    parameters: Optional[str] = Form(None),
+    files: list[UploadFile] = File(...),
+    file_paths: list[str] | None = Form(None),
+    parameters: str | None = Form(None),
 ) -> JobResponse:
     """
     Upload images for photogrammetry processing.
@@ -605,13 +608,13 @@ async def upload_images(
 
     except HTTPException:
         raise
-    except (OSError, IOError, ValueError) as e:
+    except (OSError, ValueError) as e:
         logger.error(f"Upload failed: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.get("/queue")
-async def get_queue_status() -> Dict[str, Any]:
+async def get_queue_status() -> dict[str, Any]:
     """
     Get current processing queue status.
 
@@ -622,7 +625,7 @@ async def get_queue_status() -> Dict[str, Any]:
 
 
 @app.get("/jobs/{job_id}")
-async def get_job_status(job_id: str) -> Dict[str, Any]:
+async def get_job_status(job_id: str) -> dict[str, Any]:
     """
     Get job status and information.
 
@@ -729,7 +732,7 @@ async def download_model(job_id: str) -> FileResponse:
             status_code=500,
             detail="Real model file not found. Server may be misconfigured.",
         )
-    except IOError as e:
+    except OSError as e:
         logger.error(f"Model file I/O error for job {job_id}: {e}")
         raise HTTPException(status_code=500, detail="Error reading model file.")
     except ValueError as e:
@@ -739,7 +742,7 @@ async def download_model(job_id: str) -> FileResponse:
 
 
 @app.delete("/jobs/{job_id}")
-async def cancel_job(job_id: str) -> Dict[str, str]:
+async def cancel_job(job_id: str) -> dict[str, str]:
     """
     Cancel a processing job.
 
@@ -762,7 +765,7 @@ async def cancel_job(job_id: str) -> Dict[str, str]:
 
 
 @app.get("/jobs")
-async def list_jobs() -> List[Dict[str, Any]]:
+async def list_jobs() -> list[dict[str, Any]]:
     """
     List all jobs with their status.
 

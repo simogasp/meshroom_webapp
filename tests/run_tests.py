@@ -53,7 +53,7 @@ logger = logging.getLogger(__name__)
 class TestRunner:
     """Orchestrates test execution for the Meshroom WebApp."""
 
-    def __init__(self, project_root: Optional[Path] = None):
+    def __init__(self, project_root: Path | None = None):
         """
         Initialize the test runner.
 
@@ -71,7 +71,7 @@ class TestRunner:
         self.quality_tests = self.tests_dir / "quality" / "test_quality.py"
         self.security_tests = self.tests_dir / "security" / "test_security.py"
 
-    def run_command(self, cmd: List[str], description: str) -> Tuple[bool, str]:
+    def run_command(self, cmd: list[str], description: str) -> tuple[bool, str]:
         """
         Run a command and return success status and output.
 
@@ -140,7 +140,7 @@ class TestRunner:
             return False
 
         # Try to import key testing modules
-        required_modules = ["flake8", "mypy", "bandit", "safety"]
+        required_modules = ["ruff", "mypy", "bandit", "safety"]
         missing_modules = []
 
         for module in required_modules:

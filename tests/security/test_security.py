@@ -18,6 +18,7 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -28,7 +29,7 @@ logger = logging.getLogger(__name__)
 class SecurityTester:
     """Runs security tests for the Meshroom WebApp project."""
 
-    def __init__(self, project_root: Path, output_dir: Optional[Path] = None):
+    def __init__(self, project_root: Path, output_dir: Path | None = None):
         """
         Initialize the security tester.
 
@@ -40,7 +41,7 @@ class SecurityTester:
         self.output_dir = output_dir or (project_root / "reports" / "security")
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
-    def run_safety_check(self) -> Tuple[bool, Optional[Dict]]:
+    def run_safety_check(self) -> tuple[bool, dict | None]:
         """
         Run the safety check for known security vulnerabilities in dependencies.
 
@@ -147,7 +148,7 @@ class SecurityTester:
             # In case of unexpected errors, be conservative and fail
             return False, None
 
-    def run_bandit_scan(self) -> Tuple[bool, Optional[Dict]]:
+    def run_bandit_scan(self) -> tuple[bool, dict | None]:
         """
         Run bandit static analysis security scan.
 
@@ -219,7 +220,7 @@ class SecurityTester:
             logger.info(f"Bandit report saved to: {bandit_report}")
 
             # Parse results
-            with open(bandit_report, "r") as f:
+            with open(bandit_report) as f:
                 scan_data = json.load(f)
 
             issues = scan_data.get("results", [])
@@ -269,7 +270,7 @@ class SecurityTester:
             logger.error(f"Error running bandit scan: {e}")
             return False, None
 
-    def _count_by_severity(self, issues: List[Dict]) -> Dict[str, int]:
+    def _count_by_severity(self, issues: list[dict]) -> dict[str, int]:
         """Count issues by severity level."""
         severity_counts = {}
         for issue in issues:
@@ -277,7 +278,7 @@ class SecurityTester:
             severity_counts[severity] = severity_counts.get(severity, 0) + 1
         return severity_counts
 
-    def _count_by_confidence(self, issues: List[Dict]) -> Dict[str, int]:
+    def _count_by_confidence(self, issues: list[dict]) -> dict[str, int]:
         """Count issues by confidence level."""
         confidence_counts = {}
         for issue in issues:
@@ -287,8 +288,8 @@ class SecurityTester:
 
     def generate_summary_report(
         self,
-        safety_result: Tuple[bool, Optional[Dict]],
-        bandit_result: Tuple[bool, Optional[Dict]],
+        safety_result: tuple[bool, dict | None],
+        bandit_result: tuple[bool, dict | None],
     ) -> bool:
         """
         Generate a summary security report.

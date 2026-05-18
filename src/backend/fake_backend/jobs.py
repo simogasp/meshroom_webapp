@@ -15,6 +15,7 @@ from typing import Any, Dict, List, Optional, Set
 
 from fastapi import WebSocket
 
+
 try:
     from .models import JobStatus, ProcessingJob, ProgressUpdate, WebSocketConnection
 except ImportError:
@@ -49,7 +50,7 @@ def generate_dummy_model(job_id: str) -> bytes:
     model_data = bytes([random.randint(0, 255) for _ in range(1024)])
 
     # Add job ID as metadata (for identification)
-    metadata = f"Generated for job: {job_id}".encode("utf-8")
+    metadata = f"Generated for job: {job_id}".encode()
 
     return header + len(metadata).to_bytes(4, "little") + metadata + model_data
 
@@ -88,9 +89,9 @@ def generate_real_model(job_id: str) -> bytes:
         logger.error(f"Real model file not found: {asset_path}")
         raise FileNotFoundError(f"Asset file not found: {asset_path}") from e
 
-    except IOError as e:
+    except OSError as e:
         logger.error(f"Error reading real model file: {e}")
-        raise IOError(f"Error reading asset file: {asset_path}") from e
+        raise OSError(f"Error reading asset file: {asset_path}") from e
 
 
 class JobManager:
@@ -104,12 +105,12 @@ class JobManager:
 
     def __init__(self) -> None:
         """Initialize the job manager."""
-        self._jobs: Dict[str, ProcessingJob] = {}
-        self._connections: Dict[str, WebSocket] = {}
-        self._job_subscriptions: Dict[str, Set[str]] = {}  # job_id -> connection_ids
+        self._jobs: dict[str, ProcessingJob] = {}
+        self._connections: dict[str, WebSocket] = {}
+        self._job_subscriptions: dict[str, set[str]] = {}  # job_id -> connection_ids
         self._job_queue: deque[str] = deque()  # FIFO queue of job IDs
-        self._current_processing_job: Optional[str] = None
-        self._processing_task: Optional[asyncio.Task] = None
+        self._current_processing_job: str | None = None
+        self._processing_task: asyncio.Task | None = None
         self._queue_processor_running = False
         self._queue_event = asyncio.Event()  # Event to wake queue processor
 
@@ -170,7 +171,7 @@ class JobManager:
 
         return job.job_id
 
-    def get_job(self, job_id: str) -> Optional[ProcessingJob]:
+    def get_job(self, job_id: str) -> ProcessingJob | None:
         """
         Get a job by ID.
 
@@ -186,7 +187,7 @@ class JobManager:
             job.queue_position = self._get_queue_position(job_id)
         return job
 
-    def get_all_jobs(self) -> List[ProcessingJob]:
+    def get_all_jobs(self) -> list[ProcessingJob]:
         """
         Get all jobs with updated queue positions.
 
@@ -200,7 +201,7 @@ class JobManager:
                 job.queue_position = self._get_queue_position(job.job_id)
         return jobs
 
-    def _get_queue_position(self, job_id: str) -> Optional[int]:
+    def _get_queue_position(self, job_id: str) -> int | None:
         """
         Get the current queue position for a job.
 
@@ -215,7 +216,7 @@ class JobManager:
         except ValueError:
             return None
 
-    def get_queue_status(self) -> Dict[str, Any]:
+    def get_queue_status(self) -> dict[str, Any]:
         """
         Get current queue status information.
 

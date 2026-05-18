@@ -22,8 +22,7 @@ This project follows strict Python coding standards to ensure consistency, maint
 
 All contributed code must pass the following automated checks without modification:
 
-- **Black** (line length: 88, Python targets: 3.9–3.12)
-- **isort** with `profile=black` for import sorting
+- **Ruff** (line length: 88, replaces flake8/black/isort)
 - **bandit** security checks (high severity issues must be fixed)
 - **mypy** for static type checking (no type errors allowed)
 

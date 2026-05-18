@@ -322,7 +322,7 @@ meshroom_webapp/
 **CI/CD Pipeline** (`.github/workflows/`)
 
 - Automated testing on Python 3.10-3.13
-- Code quality enforcement (flake8, mypy, black, isort)
+- Code quality enforcement (ruff, mypy)
 - Security analysis (bandit, safety)
 - Report generation and artifact collection
 
@@ -481,7 +481,7 @@ uv tool run pip-licenses --format=table --with-license-file --no-license-path
 This project includes a comprehensive continuous integration and deployment pipeline with:
 
 - **Automated Testing**: Integration, quality, and security tests
-- **Code Quality**: Linting (flake8), formatting (black), type checking (mypy)
+- **Code Quality**: Linting and formatting (ruff), type checking (mypy)
 - **Security Scanning**: Dependency vulnerabilities (safety) and static analysis (bandit)
 - **Cross-Platform**: Tests on Python 3.12-3.14
 

@@ -9,7 +9,7 @@ authors = [
     {name = "Simone Gasparini", email = "simone.gasparini@gmail.com"}
 ]
 dependencies = [
-    "fastapi==0.136.1",
+    "fastapi==0.136.3",
     "uvicorn[standard]==0.48.0",
     "pydantic==2.13.4",
     "websockets==16.0",

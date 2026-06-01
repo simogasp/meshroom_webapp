@@ -10,7 +10,7 @@ authors = [
 ]
 dependencies = [
     "fastapi==0.136.3",
-    "uvicorn[standard]==0.47.0",
+    "uvicorn[standard]==0.48.0",
     "pydantic==2.13.4",
     "websockets==16.0",
     "python-multipart==0.0.29",
@@ -23,7 +23,7 @@ test = [
     # Testing framework
     "pytest==9.0.3",
     "pytest-cov==7.1.0",
-    "pytest-asyncio==1.3.0",
+    "pytest-asyncio==1.4.0",
     # Code quality - linting and formatting (replaces flake8, black, isort)
     "ruff==0.11.7",
     # Type checking

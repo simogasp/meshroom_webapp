@@ -28,7 +28,7 @@ test = [
     "ruff==0.15.20",
     # Type checking
     "mypy==2.1.0",
-    "types-requests==2.33.0.20260518",
+    "types-requests==2.33.0.20260712",
     # Security scanning
     "bandit[toml]==1.9.4",
     "safety==3.8.1",

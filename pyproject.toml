@@ -25,7 +25,7 @@ test = [
     "pytest-cov==7.1.0",
     "pytest-asyncio==1.4.0",
     # Code quality - linting and formatting (replaces flake8, black, isort)
-    "ruff==0.16.0",
+    "ruff==0.16.5",
     # Type checking
     "mypy==2.3.1",
     "types-requests==2.33.0.20260712",

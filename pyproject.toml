@@ -12,7 +12,7 @@ dependencies = [
     "fastapi==0.141.1",
     "uvicorn[standard]==0.54.0",
     "pydantic==2.13.5",
-    "websockets==17.1",
+    "websockets==17.3",
     "python-multipart==0.0.32",
     "requests==2.34.2",
     "websocket-client==1.9.2",
